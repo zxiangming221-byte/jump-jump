@@ -238,7 +238,7 @@ const cv=document.getElementById('c'),cx=cv.getContext('2d');
 const CS30=Math.cos(Math.PI/6),SN30=Math.sin(Math.PI/6);
 let ZM=1.4;
 
-function rs(){const r=cv.getBoundingClientRect();cv.width=r.width;cv.height=r.height;ZM=Math.min(1.3,cv.width/480);const mf=cv.width/(2.44*ZM*P.PDMAX);window._ds=Math.min(1,mf);}
+function rs(){const r=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1;cv.width=r.width*dpr;cv.height=r.height*dpr;cx.setTransform(dpr,0,0,dpr,0,0);ZM=Math.min(1.3,cv.width/dpr/480);const w=cv.width/dpr,mf=w/(2.44*ZM*P.PDMAX);window._ds=Math.min(1,mf);}
 window.addEventListener('resize',rs);rs();
 function prj(wx,wz,wy){const rx=wx-st.cx,rz=wz-st.cz;return{x:(rx-rz)*CS30*ZM+cv.width/2,y:(rx+rz)*SN30*ZM-wy*ZM+cv.height*.53};}
 
@@ -583,7 +583,7 @@ document.getElementById('bestScore').textContent=st.bs;
 updateAllDisplays();
 showOverlay('homeScreen');
 requestAnimationFrame(gl);
-IMG.onload=()=>{buildCharSelect();};
+IMG.onerror=function(){console.log('LiFei image load failed');};IMG.onload=()=>{buildCharSelect();};
 </script>
 </body>
 </html>
