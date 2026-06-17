@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>跳一跳</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#e8f0f8;touch-action:none;
+  font-family:'PingFang SC','Microsoft YaHei','Segoe UI',-apple-system,sans-serif;user-select:none;-webkit-user-select:none}
+#container{position:relative;width:100%;max-width:480px;height:100%;margin:0 auto;background:#fff;box-shadow:0 0 40px rgba(0,0,0,.08)}
+canvas{display:block;width:100%;height:100%}
+#hud{position:absolute;top:28px;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none;z-index:5}
+#score{font-size:40px;font-weight:300;color:#2c3e50;text-shadow:0 1px 4px rgba(255,255,255,.8);line-height:1;letter-spacing:2px}
+#combo{font-size:15px;color:#5b9ad5;margin-top:2px;opacity:0;transition:opacity .2s;font-weight:500}
+#combo.show{opacity:1}
+#instructions{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);
+  color:rgba(44,62,80,.35);font-size:14px;pointer-events:none;transition:opacity .3s;z-index:5;font-weight:300}
+.overlay{position:absolute;inset:0;display:none;flex-direction:column;
+  align-items:center;justify-content:center;background:rgba(255,255,255,.96);z-index:10}
+.overlay.show{display:flex}
+.overlay h1{font-size:28px;color:#2c3e50;margin-bottom:6px;letter-spacing:3px;font-weight:500}
+.overlay h2{font-size:26px;color:#2c3e50;margin-bottom:14px;font-weight:500}
+.overlay .sub{font-size:13px;color:rgba(44,62,80,.45);margin-bottom:20px;font-weight:300}
+.overlay .stat{font-size:15px;color:rgba(44,62,80,.65);margin:3px 0}
+.overlay .stat b{color:#e67e22}
+.charGrid{display:flex;gap:20px;flex-wrap:wrap;justify-content:center;margin:10px 0 24px}
+.charCard{width:90px;height:115px;border-radius:16px;cursor:pointer;
+  border:2px solid rgba(91,154,213,.15);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;transition:all .2s;background:#fff}
+.charCard:hover{border-color:rgba(91,154,213,.4);background:#f0f6fb}
+.charCard.sel{border-color:#5b9ad5;box-shadow:0 4px 16px rgba(91,154,213,.2);background:#eef5fb}
+.charCard .pv{width:55px;height:60px;display:flex;align-items:flex-end;justify-content:center}
+.charCard .pv canvas{display:block}
+.charCard .nm{font-size:12px;color:rgba(44,62,80,.65);margin-top:6px;font-weight:400}
+button{padding:11px 28px;font-size:14px;border-radius:20px;cursor:pointer;border:1.5px solid rgba(91,154,213,.25);
+  background:#fff;color:#2c3e50;transition:all .2s;letter-spacing:1px;margin:4px;font-weight:400}
+button:hover{background:#f0f6fb;border-color:#5b9ad5}
+button:active{background:#e3eff8}
+button.accent{background:#5b9ad5;color:#fff;border-color:#5b9ad5;font-weight:500}
+button.accent:hover{background:#4a8bc5;border-color:#4a8bc5}
+.btnRow{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+#pauseBtn{position:absolute;top:16px;right:10px;z-index:8;font-size:12px;padding:5px 12px;
+  border-radius:12px;display:none;background:rgba(255,255,255,.85);border-color:rgba(0,0,0,.1);color:#7f8c8d}
+.goldBar{color:#5b9ad5;font-size:13px;margin-bottom:10px;font-weight:500}
+.gachaResult{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;
+  justify-content:center;background:rgba(255,255,255,.97);z-index:20}
+.gachaResult.show{display:flex}
+.gachaResult .itemIcon{font-size:48px;margin-bottom:8px}
+.gachaResult .itemName{font-size:18px;color:#2c3e50;margin-bottom:4px}
+.gachaResult .itemRarity{font-size:12px;margin-bottom:16px}
+/* 抽奖卡片 */
+.gachaCard{width:200px;padding:3px;border-radius:22px;position:relative;
+  background:conic-gradient(from 0deg,#ff6b6b,#feca57,#48dbfb,#ff9ff3,#ff6b6b);
+  animation:rainbowSpin 2s linear infinite;transition:transform .25s,opacity .25s}
+.gachaCard.enter{animation:cardIn .3s ease-out}
+.gachaCard.exit{animation:cardOut .2s ease-in forwards}
+.gachaCard.rCommon{background:#bdc3c7;animation:none}
+.gachaCard.rRare{background:linear-gradient(135deg,#5b9ad5,#48dbfb,#5b9ad5);animation:shimmer 2s ease-in-out infinite}
+.gachaCard.rEpic{background:linear-gradient(135deg,#c084fc,#a55eea,#c084fc);animation:shimmer 1.5s ease-in-out infinite}
+.gachaCard.rLegend{background:conic-gradient(from 0deg,#ff6b6b,#feca57,#48dbfb,#ff9ff3,#ff6b6b);animation:rainbowSpin 2s linear infinite}
+.gachaCard .cardInner{width:100%;padding:22px 18px;border-radius:20px;background:#fff;
+  display:flex;flex-direction:column;align-items:center}
+.gachaCard .cardIcon{font-size:56px;margin-bottom:6px}
+.gachaCard .cardName{font-size:20px;font-weight:600;color:#2c3e50;margin-bottom:4px}
+.gachaCard .cardRarity{font-size:12px;font-weight:500;margin-bottom:4px}
+.gachaCard .cardBadge{font-size:11px;padding:2px 10px;border-radius:10px;margin-top:4px}
+.gachaCard .cardBadge.new{background:#e8f5e9;color:#27ae60}
+.gachaCard .cardBadge.dup{background:#fef3e2;color:#e67e22}
+@keyframes cardIn{0%{transform:scale(.5);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes cardOut{0%{transform:scale(1);opacity:1}100%{transform:scale(.5);opacity:0}}
+@keyframes rainbowSpin{0%{filter:hue-rotate(0deg)}100%{filter:hue-rotate(360deg)}}
+@keyframes shimmer{0%,100%{opacity:.8}50%{opacity:1}}
+/* 批量展示网格 */
+.batchGrid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:340px;margin:8px 0}
+.batchGrid .bCard{width:80px;padding:8px 4px;border-radius:12px;text-align:center;background:#fff;
+  border:2px solid rgba(0,0,0,.08);font-size:11px}
+.batchGrid .bCard .bIco{font-size:28px;display:block}
+.batchGrid .bCard .bNm{color:#2c3e50;margin-top:2px}
+.batchGrid .bCard .bTag{font-size:9px;border-radius:6px;padding:1px 6px;margin-top:3px;display:inline-block}
+.batchGrid .bCard.rRare{border-color:rgba(91,154,213,.4)}
+.batchGrid .bCard.rEpic{border-color:rgba(192,132,252,.4)}
+.batchGrid .bCard.rLegend{border-color:rgba(230,126,34,.4)}
+.gachaCard.animIn{animation:cardIn .35s ease-out forwards}
+.gachaCard.animOut{animation:cardOut .3s ease-in forwards}
+/* 十连汇总 */
+.summaryGrid{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-width:300px;margin:12px 0}
+.summaryGrid .si{width:52px;height:64px;border-radius:8px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;font-size:10px;background:#fff;border:2px solid #eee}
+.summaryGrid .si.rCommon{border-color:#bdc3c7}
+.summaryGrid .si.rRare{border-color:#5b9ad5}
+.summaryGrid .si.rEpic{border-color:#c084fc}
+.summaryGrid .si.rLegend{border-color:#ff8c00}
+.summaryGrid .si .sico{font-size:22px}
+.summaryGrid .si .sdup{font-size:9px;color:#e67e22;margin-top:2px}
+.charCard.locked{opacity:.4;pointer-events:none;position:relative}
+.charCard.locked::after{content:'🔒';position:absolute;font-size:16px;top:8px;right:8px}
+.gachaGrid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:340px;margin:8px 0 16px}
+.gachaGrid .gi{width:56px;height:68px;border-radius:10px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;border:1px solid rgba(0,0,0,.06);font-size:10px;color:rgba(0,0,0,.25);background:#fafbfc}
+.gachaGrid .gi.unlocked{border-color:rgba(91,154,213,.3);color:#5b9ad5;background:#f0f6fb}
+.collectionGrid{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:360px;margin:8px 0 16px}
+.collectionGrid .ci{width:62px;height:80px;border-radius:12px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;border:1px solid rgba(0,0,0,.06);font-size:10px;
+  color:rgba(0,0,0,.25);position:relative;background:#fafbfc}
+.collectionGrid .ci.unlocked{border-color:rgba(91,154,213,.2);color:#2c3e50;background:#fff}
+.collectionGrid .ci .ico{font-size:24px;margin-bottom:2px}
+.collectionGrid .ci .lock{position:absolute;font-size:14px;opacity:.5}
+.exchangeRow{display:flex;align-items:center;gap:12px;margin:8px 0}
+.exchangeRow input{width:60px;padding:6px 8px;border-radius:8px;border:1px solid rgba(0,0,0,.12);
+  background:#f8fafc;color:#2c3e50;text-align:center;font-size:14px}
+.rCommon{color:#95a5a6}.rRare{color:#5b9ad5}.rEpic{color:#c084fc}.rLegend{color:#e67e22}
+#pauseScreen.overlay{background:rgba(255,255,255,.95)}
+#pauseScreen h1{font-size:24px;margin-bottom:20px}
+.redeemInput{padding:10px 16px;border-radius:10px;border:1px solid rgba(0,0,0,.12);
+  background:#f8fafc;color:#2c3e50;text-align:center;font-size:15px;width:200px;margin:8px 0 16px;letter-spacing:2px}
+</style>
+</head>
+<body>
+<div id="container">
+  <canvas id="c"></canvas>
+  <div id="hud" style="display:none"><div id="score">0</div><div id="combo"></div></div>
+  <div id="instructions" style="display:none">按住蓄力 · 松开跳跃</div>
+  <button id="pauseBtn">暂停</button>
+
+  <!-- 主页 -->
+  <div id="homeScreen" class="overlay show">
+    <h1>跳一跳</h1>
+    <div class="sub">按住蓄力 · 松开跳跃</div>
+    <div class="goldBar">🪙 <span id="goldDisplay">0</span>  💎 <span id="diaDisplay">0</span></div>
+    <div class="btnRow">
+      <button class="accent" id="btnStart">开 始 游 戏</button>
+      <button id="btnChar">选 择 角 色</button>
+    </div>
+    <div class="btnRow" style="margin-top:8px">
+      <button id="btnGacha">抽 奖</button>
+      <button id="btnCollection">图 鉴</button>
+    </div>
+    <button id="btnRedeem" style="margin-top:14px;font-size:12px;color:#95a5a6;border-color:rgba(0,0,0,.08)">兑换码</button>
+  </div>
+
+  <!-- 角色选择 -->
+  <div id="charScreen" class="overlay">
+    <h1>选择角色</h1>
+    <div class="charGrid" id="charGrid"></div>
+    <button id="btnBack">返 回</button>
+  </div>
+
+  <!-- 游戏结束 -->
+  <div id="gameOver" class="overlay">
+    <h2>游戏结束</h2>
+    <div class="stat">得分 <b id="finalScore">0</b></div>
+    <div class="stat">最高连击 <b id="maxComboStat">0</b></div>
+    <div class="stat">最佳 <b id="bestScore">0</b></div>
+    <button class="accent" id="restartBtn" style="margin-top:20px">再 来</button>
+  </div>
+
+  <!-- 暂停 -->
+  <div id="pauseScreen" class="overlay">
+    <h1>暂停</h1>
+    <div class="btnRow" style="flex-direction:column;gap:12px">
+      <button class="accent" id="btnResume">继 续 游 戏</button>
+      <button id="btnPauseHome">返 回 主 页</button>
+    </div>
+  </div>
+
+  <!-- 抽奖 -->
+  <div id="gachaScreen" class="overlay">
+    <h1>抽 奖</h1>
+    <div class="goldBar">🪙 <span id="gGoldDisplay">0</span>  💎 <span id="gDiaDisplay">0</span></div>
+    <div class="btnRow">
+      <button class="accent" id="btnPull1">单抽 · 1💎</button>
+      <button class="accent" id="btnPull10">十连 · 10💎</button>
+    </div>
+    <div style="margin-top:12px">
+      <button id="btnExchange">💱 金币兑钻石</button>
+    </div>
+    <button id="btnGachaBack" style="margin-top:16px">返 回</button>
+  </div>
+
+  <!-- 钻石兑换 -->
+  <div id="exchangeScreen" class="overlay">
+    <h1>金币兑钻石</h1>
+    <div class="goldBar">🪙 <span id="exGold">0</span> → 10🪙 = 1💎</div>
+    <div class="exchangeRow">
+      <span style="color:#2c3e50">兑换</span>
+      <input id="exInput" type="number" value="1" min="1">
+      <span style="color:#2c3e50">颗钻石</span>
+    </div>
+    <div style="font-size:12px;color:rgba(44,62,80,.5);margin-bottom:8px" id="exCost">需要 10 金币</div>
+    <button class="accent" id="btnDoExchange">确 认 兑 换</button>
+    <button id="btnExBack" style="margin-top:8px">返 回</button>
+  </div>
+
+  <!-- 图鉴 -->
+  <div id="collectionScreen" class="overlay">
+    <h1>图 鉴</h1>
+    <div style="font-size:12px;color:rgba(44,62,80,.4);margin-bottom:8px" id="colProgress">已收集 0/20</div>
+    <div class="collectionGrid" id="colGrid"></div>
+    <button id="btnColBack">返 回</button>
+  </div>
+
+  <!-- 兑换码 -->
+  <div id="redeemScreen" class="overlay">
+    <h1>兑换码</h1>
+    <input class="redeemInput" id="redeemInput" type="text" placeholder="输入兑换码" maxlength="20">
+    <div style="font-size:12px;color:rgba(0,0,0,.3);margin-bottom:12px" id="redeemMsg"></div>
+    <button class="accent" id="btnDoRedeem">兑 换</button>
+    <button id="btnRedBack" style="margin-top:8px">返 回</button>
+  </div>
+
+  <!-- 抽奖结果弹窗 -->
+  <div id="gachaResult" class="gachaResult">
+    <div class="gachaCard" id="grCard">
+      <div class="cardInner">
+        <div class="cardIcon" id="grIcon"></div>
+        <div class="cardName" id="grName"></div>
+        <div class="cardRarity" id="grRarity"></div>
+        <div class="cardBadge" id="grBadge"></div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:rgba(44,62,80,.4);margin:6px 0" id="grCounter"></div>
+    <div style="display:flex;gap:10px">
+      <button class="accent" id="btnGrClose">确 定</button>
+      <button id="btnGrSkip" style="font-size:12px;color:#95a5a6;border-color:rgba(0,0,0,.06)">跳过 ▸▸</button>
+    </div>
+    <div class="summaryGrid" id="grSummary" style="display:none"></div>
+  </div>
+</div>
+
+<script>
+// ── 参数 ──
+const P={CS:.9,MIND:20,MAXD:320,JD:.55,PDMIN:120,PDMAX:280,PWMIN:50,PWMAX:100,PDMIN2:50,PDMAX2:100,PH:30,LM:8,PT:.85,NT:.6,CL:4,AV:1.4,CBD:3};
+const COLS=[{t:'#FFE0B2',s:'#FFB74D',d:'#F57C00'},{t:'#C8E6C9',s:'#81C784',d:'#388E3C'},{t:'#BBDEFB',s:'#64B5F6',d:'#1976D2'},{t:'#F8BBD0',s:'#F48FB1',d:'#C2185B'},{t:'#E1BEE7',s:'#BA68C8',d:'#7B1FA2'},{t:'#B2DFDB',s:'#4DB6AC',d:'#00796B'},{t:'#FFF9C4',s:'#FFF176',d:'#F9A825'}];
+
+// ── Canvas ──
+const cv=document.getElementById('c'),cx=cv.getContext('2d');
+const CS30=Math.cos(Math.PI/6),SN30=Math.sin(Math.PI/6);
+let ZM=1.4;
+
+function rs(){const r=cv.getBoundingClientRect();cv.width=r.width;cv.height=r.height;ZM=Math.min(1.3,cv.width/480);const mf=cv.width/(2.44*ZM*P.PDMAX);window._ds=Math.min(1,mf);}
+window.addEventListener('resize',rs);rs();
+function prj(wx,wz,wy){const rx=wx-st.cx,rz=wz-st.cz;return{x:(rx-rz)*CS30*ZM+cv.width/2,y:(rx+rz)*SN30*ZM-wy*ZM+cv.height*.53};}
+
+// ── 角色系统 ──
+const IMG=new Image();IMG.src='image/54da03339b65fa3e8573988486072b74.png';
+let chSel='chess';
+
+// ── 奖品库 ──
+const PRIZES=[
+  {id:'p01',n:'铜钱',ico:'🪙',r:'common'},
+  {id:'p02',n:'贝壳',ico:'🐚',r:'common'},
+  {id:'p03',n:'羽毛',ico:'🪶',r:'common'},
+  {id:'p04',n:'鹅卵石',ico:'🪨',r:'common'},
+  {id:'p05',n:'四叶草',ico:'🍀',r:'common'},
+  {id:'p06',n:'松果',ico:'🌰',r:'common'},
+  {id:'p07',n:'海星',ico:'⭐',r:'common'},
+  {id:'p08',n:'种子',ico:'🌱',r:'common'},
+  {id:'p09',n:'纽扣',ico:'🔘',r:'common'},
+  {id:'p10',n:'银杏叶',ico:'🍂',r:'common'},
+  {id:'p11',n:'金铃铛',ico:'🔔',r:'rare'},
+  {id:'p12',n:'翡翠环',ico:'💚',r:'rare'},
+  {id:'p13',n:'紫水晶',ico:'💎',r:'rare'},
+  {id:'p14',n:'星光砂',ico:'✨',r:'rare'},
+  {id:'p15',n:'珊瑚枝',ico:'🪸',r:'rare'},
+  {id:'p16',n:'琥珀坠',ico:'🧡',r:'rare'},
+  {id:'p17',n:'凤凰羽',ico:'🔥',r:'epic'},
+  {id:'p18',n:'龙鳞',ico:'🐉',r:'epic'},
+  {id:'p19',n:'月华石',ico:'🌙',r:'epic'},
+  {id:'p20',n:'李飞',ico:'👤',r:'legend'},
+];
+const RARITY_WEIGHT={common:65,rare:23,epic:10,legend:2};
+const DUP_GOLD={common:3,rare:5,epic:10,legend:20};
+// ── 音效引擎 (Web Audio) ──
+var _ac=null;
+function _ctx(){if(!_ac)_ac=new(window.AudioContext||window.webkitAudioContext)();return _ac;}
+function _beep(f,d,t,v){var c=_ctx(),o=c.createOscillator(),g=c.createGain();o.type=t||'sine';o.frequency.value=f;g.gain.setValueAtTime(v||.15,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+d);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+d);}
+function _swipe(f1,f2,d){var c=_ctx(),o=c.createOscillator(),g=c.createGain();o.type='sine';o.frequency.setValueAtTime(f1,c.currentTime);o.frequency.linearRampToValueAtTime(f2,c.currentTime+d);g.gain.setValueAtTime(.12,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+d);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+d);}
+function _pop(){_beep(600,.08,'sine',.2);setTimeout(function(){_beep(800,.06,'sine',.15);},50);}
+function _thud(){var c=_ctx(),o=c.createOscillator(),g=c.createGain();o.type='triangle';o.frequency.setValueAtTime(150,c.currentTime);o.frequency.exponentialRampToValueAtTime(40,c.currentTime+.15);g.gain.setValueAtTime(.25,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.18);o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.18);}
+function _charge(d){_beep(200+d*400,.06,'sawtooth',.04);}
+function _land(p){if(p>0.85){_beep(880,.1,'sine',.2);_beep(1100,.08,'sine',.15);}else if(p>0.6){_beep(660,.08,'sine',.18);}else{_beep(440,.06,'triangle',.15);}}
+function _drop(){_beep(300,.06,'triangle',.12);_beep(150,.12,'triangle',.2);}
+function _fall(){_swipe(400,80,.4);}
+function _gachaPull(){for(var i=0;i<3;i++){setTimeout(function(){_beep(523+i*200,.06,'sine',.1);},i*80);}}
+function _gachaRare(){_swipe(600,1200,.2);_beep(1200,.12,'sine',.15);}
+function _gachaLegend(){for(var i=0;i<5;i++){setTimeout(function(){_beep(800+i*150,.08,'sine',.12);},i*60);}}
+
+
+// ── 持久化 ──
+function saveData(){
+  try{localStorage.setItem('jump_data',JSON.stringify({gold:st.gold,dia:st.dia,col:Array.from(st.col)}));}catch(e){}
+}
+function loadData(){
+  try{const d=JSON.parse(localStorage.getItem('jump_data')||'{}');st.gold=d.gold||0;st.dia=d.dia||0;st.col=new Set(d.col||[]);}catch(e){st.gold=0;st.dia=0;st.col=new Set();}
+}
+
+function drChess(){
+  const s=ZM,segs=[{yb:0,yt:-4*s,rb:8*s,rt:5.5*s,b:!0},{yb:-5*s,yt:-16*s,rb:4.5*s,rt:3.8*s,b:!1},{yb:-18*s,yt:-20*s,rb:4*s,rt:6.5*s,b:!1},{yb:-20*s,yt:-21.5*s,rb:6.5*s,rt:3.5*s,b:!1},{yb:-21.5*s,yt:-25*s,rb:3.5*s,rt:3.5*s,b:!1}];
+  for(const sg of segs){const{yb,yt,rb,rt,b}=sg,ryb=rb*.55,ryt=rt*.55;const gd=cx.createLinearGradient(-rb,0,rb,0);gd.addColorStop(0,'#3a3a3a');gd.addColorStop(.3,'#444');gd.addColorStop(.55,'#333');gd.addColorStop(.75,'#1a1a1a');gd.addColorStop(1,'#0f0f0f');cx.fillStyle=gd;cx.beginPath();cx.moveTo(-rb,yb);cx.lineTo(rb,yb);cx.lineTo(rt,yt);cx.lineTo(-rt,yt);cx.closePath();cx.fill();cx.fillStyle='#3d3d3d';cx.beginPath();cx.ellipse(0,yt,rt,ryt,0,0,Math.PI*2);cx.fill();cx.fillStyle='rgba(255,255,255,.06)';cx.beginPath();cx.ellipse(-rt*.2,yt-ryt*.3,rt*.5,ryt*.4,0,0,Math.PI*2);cx.fill();if(b){cx.fillStyle='#1a1a1a';cx.beginPath();cx.ellipse(0,yb,rb,ryb,0,0,Math.PI*2);cx.fill();}}
+  const hcy=-29.5*s,hR=5*s,hG=cx.createRadialGradient(-hR*.25,-hR*.25,hR*.1,0,0,hR);hG.addColorStop(0,'#555');hG.addColorStop(.3,'#3a3a3a');hG.addColorStop(.6,'#1f1f1f');hG.addColorStop(1,'#0a0a0a');cx.fillStyle=hG;cx.beginPath();cx.arc(0,hcy,hR,0,Math.PI*2);cx.fill();cx.strokeStyle='rgba(0,0,0,.4)';cx.lineWidth=.5*s;cx.beginPath();cx.arc(0,hcy,hR,0,Math.PI*2);cx.stroke();
+}
+
+function drLifei(){
+  if(!IMG.complete||!IMG.naturalWidth)return;
+  const s=ZM,ch=58*s,cw=ch*(IMG.naturalWidth/IMG.naturalHeight);
+  cx.drawImage(IMG,-cw/2,-ch,cw,ch);
+}
+
+// ── 适配形状的影子 ──
+function drShadow(pT,pdx,pdz,s){
+  if(chSel==='lifei'){
+    // 李飞: 矩形影子, 匹配图片轮廓
+    const ch2=58*s*pT,cw2=ch2*(IMG.naturalWidth/IMG.naturalHeight);
+    const rx=cw2/2,ry=ch2*.18;
+    // 脚下黑核
+    cx.fillStyle=`rgba(0,0,0,${.4*pT})`;cx.beginPath();
+    cx.ellipse(0,0,rx,ry,-.1,0,Math.PI*2);cx.fill();
+    // 中间层
+    cx.fillStyle=`rgba(0,0,0,${.22*pT})`;cx.beginPath();
+    cx.ellipse(pdx*.45,pdz*.45,rx+2*s*pT,ry+1*s*pT,-.1,0,Math.PI*2);cx.fill();
+    // 外层
+    cx.fillStyle=`rgba(0,0,0,${.1*pT})`;cx.beginPath();
+    cx.ellipse(pdx*.9,pdz*.9,rx+5*s*pT,ry+2*s*pT,-.1,0,Math.PI*2);cx.fill();
+  }else{
+    // 棋子: 圆形影子
+    cx.fillStyle=`rgba(0,0,0,${.38*pT})`;cx.beginPath();
+    cx.ellipse(0,0,5*s*pT,2.8*s*pT,-.2,0,Math.PI*2);cx.fill();
+    cx.fillStyle=`rgba(0,0,0,${.22*pT})`;cx.beginPath();
+    cx.ellipse(pdx*.5,pdz*.5,8*s*pT,4.4*s*pT,-.2,0,Math.PI*2);cx.fill();
+    cx.fillStyle=`rgba(0,0,0,${.1*pT})`;cx.beginPath();
+    cx.ellipse(pdx,pdz,11*s*pT,6*s*pT,-.2,0,Math.PI*2);cx.fill();
+  }
+}
+
+// ── 状态 ──
+const st={ph:'start',sc:0,cb:0,mc:0,bs:0,gold:0,dia:0,col:new Set(),cpw:0,csrt:0,cpp:0,jswx:0,jswz:0,jtwx:0,jtwz:0,jpr:0,jst:0,pwx:0,pwz:0,pwy:0,psx:1,psy:1,prt:0,cx:0,cz:0,psk:0,pbo:0,_bv:0,pt:[],pp:[],cpi:0,npi:1};
+
+// ── 平台 ──
+let pl=[];
+function mkp(wx,wz,w,d){return{wx,wz,w,d,cl:COLS[Math.random()*COLS.length|0],dy:350,dv:0};}
+function inp(){pl=[];const p0=mkp(0,0,90,90);p0.dy=0;pl.push(p0);gnp();}
+function gnp(){const l=pl[pl.length-1],a=(Math.random()-.5)*P.AV,ds=window._ds||1,minD=P.PDMIN*ds,maxD=P.PDMAX*ds,d=minD+Math.random()*(maxD-minD),dz=-Math.cos(a)*d,dx=Math.sin(a)*d,minW=P.PWMIN*ds,maxW=P.PWMAX*ds,w=minW+Math.random()*(maxW-minW),minD2=P.PDMIN2*ds,maxD2=P.PDMAX2*ds,d2=minD2+Math.random()*(maxD2-minD2);pl.push(mkp(l.wx+dx,l.wz+dz,w,d2));}
+function pin(wx,wz,p){const hw=p.w/2+P.LM,hd=p.d/2+P.LM;return wx>=p.wx-hw&&wx<=p.wx+hw&&wz>=p.wz-hd&&wz<=p.wz+hd;}
+function prec(wx,wz,p){return 1-Math.max(Math.abs(wx-p.wx)/(p.w/2),Math.abs(wz-p.wz)/(p.d/2));}
+
+// ── 粒子 ──
+function sp(wx,wz,wy,pc){const n=8+Math.floor(pc*16);for(let i=0;i<n;i++){const an=Math.random()*Math.PI*2,spd=(40+Math.random()*80)*ZM;st.pt.push({wx,wz,wy,vx:Math.cos(an)*spd,vz:Math.sin(an)*spd,vy:(60+Math.random()*100)*ZM,lf:1,ml:.5+Math.random()*.7,sz:(2+Math.random()*3)*ZM,r:255,g:215,b:Math.random()<.5?0:100});}}
+function spp(wx,wz,wy,tx,bn){st.pp.push({wx,wz,wy,tx,bn,lf:1,ml:.8});}
+
+// ── 渲染 ──
+function drp(pl2,sk){const{wx:wpx,wz:wpz,w,d,cl,dy}=pl2,dy2=dy||0,th=P.PH-(sk||0)+dy2,bh=dy2,hw=w/2,hd=d/2;const t0={wx:wpx-hw,wz:wpz-hd},t1={wx:wpx+hw,wz:wpz-hd},t2={wx:wpx+hw,wz:wpz+hd},t3={wx:wpx-hw,wz:wpz+hd};const p0t=prj(t0.wx,t0.wz,th),p1t=prj(t1.wx,t1.wz,th),p2t=prj(t2.wx,t2.wz,th),p3t=prj(t3.wx,t3.wz,th),p0b=prj(t0.wx,t0.wz,bh),p1b=prj(t1.wx,t1.wz,bh),p2b=prj(t2.wx,t2.wz,bh),p3b=prj(t3.wx,t3.wz,bh);cx.save();const tH=Math.max(0,1-dy2/350),tH2=tH*tH,sa=.12+.33*tH2,ss=.2+.8*tH2,so=10*ZM*ss,sx=so*.5,sz=so*.85;const g0=prj(t0.wx,t0.wz,0),g1=prj(t1.wx,t1.wz,0),g2=prj(t2.wx,t2.wz,0),g3=prj(t3.wx,t3.wz,0);cx.fillStyle=`rgba(0,0,0,${.08+.22*tH2})`;cx.beginPath();cx.moveTo(g0.x,g0.y);cx.lineTo(g1.x,g1.y);cx.lineTo(g2.x,g2.y);cx.lineTo(g3.x,g3.y);cx.closePath();cx.fill();const g1s=prj(t1.wx+sx,t1.wz+sz,0),g2s=prj(t2.wx+sx,t2.wz+sz,0),g3s=prj(t3.wx+sx,t3.wz+sz,0);cx.fillStyle=`rgba(0,0,0,${sa})`;cx.beginPath();cx.moveTo(g1.x,g1.y);cx.lineTo(g2.x,g2.y);cx.lineTo(g3.x,g3.y);cx.lineTo(g3s.x,g3s.y);cx.lineTo(g2s.x,g2s.y);cx.lineTo(g1s.x,g1s.y);cx.closePath();cx.fill();cx.fillStyle=cl.d;cx.beginPath();cx.moveTo(p1t.x,p1t.y);cx.lineTo(p2t.x,p2t.y);cx.lineTo(p2b.x,p2b.y);cx.lineTo(p1b.x,p1b.y);cx.closePath();cx.fill();const rG=cx.createLinearGradient(0,p1t.y,0,p1b.y);rG.addColorStop(0,'rgba(0,0,0,0)');rG.addColorStop(.6,'rgba(0,0,0,0)');rG.addColorStop(1,'rgba(0,0,0,.35)');cx.fillStyle=rG;cx.beginPath();cx.moveTo(p1t.x,p1t.y);cx.lineTo(p2t.x,p2t.y);cx.lineTo(p2b.x,p2b.y);cx.lineTo(p1b.x,p1b.y);cx.closePath();cx.fill();cx.fillStyle=cl.s;cx.beginPath();cx.moveTo(p2t.x,p2t.y);cx.lineTo(p3t.x,p3t.y);cx.lineTo(p3b.x,p3b.y);cx.lineTo(p2b.x,p2b.y);cx.closePath();cx.fill();const fG=cx.createLinearGradient(0,p2t.y,0,p2b.y);fG.addColorStop(0,'rgba(0,0,0,0)');fG.addColorStop(.6,'rgba(0,0,0,0)');fG.addColorStop(1,'rgba(0,0,0,.25)');cx.fillStyle=fG;cx.beginPath();cx.moveTo(p2t.x,p2t.y);cx.lineTo(p3t.x,p3t.y);cx.lineTo(p3b.x,p3b.y);cx.lineTo(p2b.x,p2b.y);cx.closePath();cx.fill();cx.fillStyle=cl.t;cx.beginPath();cx.moveTo(p0t.x,p0t.y);cx.lineTo(p1t.x,p1t.y);cx.lineTo(p2t.x,p2t.y);cx.lineTo(p3t.x,p3t.y);cx.closePath();cx.fill();cx.strokeStyle='rgba(255,255,255,.3)';cx.lineWidth=1;cx.stroke();cx.fillStyle='rgba(255,255,255,.12)';cx.beginPath();cx.moveTo(p0t.x,p0t.y);cx.lineTo(p1t.x,p1t.y);cx.lineTo(p2t.x,p2t.y);cx.lineTo(p3t.x,p3t.y);cx.closePath();cx.fill();cx.restore();}
+
+function drpl(){
+  const{pwx,pwz,pwy,psx,psy,prt}=st,effWy=(st.ph==='charging')?pwy-st.psk:pwy,p=prj(pwx,pwz,effWy);
+  cx.save();cx.translate(p.x,p.y);cx.rotate(prt);cx.scale(psx,psy);
+  const s=ZM,pAir=Math.max(0,effWy-P.PH),pT=Math.max(.15,1-pAir/200),pLen=10*s*pT,pdx=pLen*.5,pdz=pLen*.85;
+  drShadow(pT,pdx,pdz,s);
+  if(chSel==='lifei'){drLifei();}else{drChess();}
+  cx.restore();
+}
+
+function drcr(){const{pwx,pwz,pwy,cpp}=st,p=prj(pwx,pwz,pwy),s=ZM,r=24*s;cx.strokeStyle='rgba(255,255,255,.15)';cx.lineWidth=4*s;cx.beginPath();cx.arc(p.x,p.y-14*s,r,0,Math.PI*2);cx.stroke();const t=cpp,cr=Math.floor(76+t*179),cg=Math.floor(175-t*175),cb=Math.floor(80-t*80);cx.strokeStyle=`rgb(${cr},${cg},${cb})`;cx.lineWidth=4*s;cx.lineCap='round';cx.beginPath();cx.arc(p.x,p.y-14*s,r,-Math.PI/2,-Math.PI/2+Math.PI*2*t);cx.stroke();cx.lineCap='butt';}
+
+function render(){
+  const w=cv.width,h=cv.height;cx.clearRect(0,0,w,h);
+  const bg=cx.createLinearGradient(0,0,0,h);bg.addColorStop(0,'#a8d8ea');bg.addColorStop(.4,'#c5e3f0');bg.addColorStop(.7,'#dceef5');bg.addColorStop(1,'#eef6f9');cx.fillStyle=bg;cx.fillRect(0,0,w,h);
+  const gH=800,gS=80,wg0=Math.floor((st.cx-gH)/gS)*gS,zg0=Math.floor((st.cz-gH)/gS)*gS;
+  const gc=[{wx:st.cx-gH,wz:st.cz-gH},{wx:st.cx+gH,wz:st.cz-gH},{wx:st.cx+gH,wz:st.cz+gH},{wx:st.cx-gH,wz:st.cz+gH}],gs=gc.map(c=>prj(c.wx,c.wz,0));
+  cx.fillStyle='#c8c8c8';cx.beginPath();cx.moveTo(gs[0].x,gs[0].y);cx.lineTo(gs[1].x,gs[1].y);cx.lineTo(gs[2].x,gs[2].y);cx.lineTo(gs[3].x,gs[3].y);cx.closePath();cx.fill();
+  cx.strokeStyle='rgba(0,0,0,.08)';cx.lineWidth=1;
+  for(let wx=wg0;wx<=st.cx+gH;wx+=gS){const a=prj(wx,st.cz-gH,0),b=prj(wx,st.cz+gH,0);cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);cx.stroke();}
+  for(let wz=zg0;wz<=st.cz+gH;wz+=gS){const a=prj(st.cx-gH,wz,0),b=prj(st.cx+gH,wz,0);cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);cx.stroke();}
+  const srt=pl.map((p,i)=>({...p,ix:i}));if(st.ph==='falling')srt.push({isP:!0,wz:st.pwz});srt.sort((a,b)=>a.wz-b.wz);
+  for(const it of srt){if(it.isP){drpl();continue;}if(it.dy>320)continue;const sk=(it.ix===st.cpi)?st.psk+st.pbo:0;drp(it,sk);}
+  for(const pt of st.pt){const p2=prj(pt.wx,pt.wz,pt.wy),a=pt.lf/pt.ml;cx.fillStyle=`rgba(${pt.r},${pt.g},${pt.b},${a})`;cx.beginPath();cx.arc(p2.x,p2.y,pt.sz*a,0,Math.PI*2);cx.fill();}
+  if(st.ph!=='falling')drpl();
+  if(st.ph==='charging')drcr();
+  for(const pp of st.pp){const p2=prj(pp.wx,pp.wz,pp.wy),a=pp.lf/pp.ml,sc=pp.bn>=3?1.4:1;cx.save();cx.globalAlpha=a;cx.font=`bold ${18*sc*ZM}px -apple-system,'Microsoft YaHei',sans-serif`;cx.fillStyle=pp.bn>=3?'#ffd54f':'#fff';cx.textAlign='center';cx.fillText(pp.tx,p2.x,p2.y);cx.restore();}
+}
+
+// ── 更新 ──
+function upd(dt){if(pl[st.cpi]){st.cx+=(pl[st.cpi].wx-st.cx)*P.CL*dt;st.cz+=(pl[st.cpi].wz-st.cz)*P.CL*dt;}if(Math.abs(st.pbo)>.1){st.pbo+=st._bv*dt;st._bv-=st.pbo*40*dt;st._bv*=Math.pow(.02,dt);if(Math.abs(st.pbo)<.2&&Math.abs(st._bv)<1){st.pbo=0;st._bv=0;}}for(const p of pl){if(p.dy>.5||p.dy<0){if(p.dy>300&&p.dy-p.dv*dt<=300)_drop();p.dv+=1200*dt;p.dy-=p.dv*dt;if(p.dy<=0){if(Math.abs(p.dv)>30){p.dy=-p.dy*.3;p.dv=-p.dv*.35;}else{p.dy=0;p.dv=0;_thud();}}}}for(const pt of st.pt){pt.wx+=pt.vx*dt;pt.wz+=pt.vz*dt;pt.wy+=pt.vy*dt;pt.vy-=200*dt;pt.lf-=dt;}st.pt=st.pt.filter(p=>p.lf>0);for(const pp of st.pp){pp.wy+=40*ZM*dt;pp.lf-=dt;}st.pp=st.pp.filter(p=>p.lf>0);switch(st.ph){case'charging':updc(dt);break;case'jumping':updj(dt);break;case'falling':updf(dt);break;}}
+function updc(dt){st.cpp=Math.min(1,(performance.now()-st.csrt)/1000*P.CS);st.psx=1+st.cpp*.2;st.psy=1-st.cpp*.35;st.psk=st.cpp*6;if(!st._clt||performance.now()-st._clt>150){_charge(st.cpp);st._clt=performance.now();}}
+function stj(){const np=pl[st.npi];st.pbo=-st.psk;st._bv=st.psk*8;st.psk=0;const an=Math.atan2(np.wx-st.pwx,np.wz-st.pwz),ds=window._ds||1,minD=P.MIND*ds,maxD=P.MAXD*ds,d=minD+st.cpp*(maxD-minD);st.jswx=st.pwx;st.jswz=st.pwz;st.jtwx=st.pwx+Math.sin(an)*d;st.jtwz=st.pwz+Math.cos(an)*d;st.jpr=0;st.jst=performance.now();st.ph='jumping';st.psx=.85;st.psy=1.4;_pop();}
+function updj(dt){const et=(performance.now()-st.jst)/1000;st.jpr=Math.min(1,et/P.JD);const t=st.jpr;st.pwx=st.jswx+(st.jtwx-st.jswx)*t;st.pwz=st.jswz+(st.jtwz-st.jswz)*t;const jd=Math.sqrt((st.jtwx-st.jswx)**2+(st.jtwz-st.jswz)**2),jH=jd*.45;st.pwy=P.PH+jH*4*t*(1-t);if(t<.2){st.psx=.85;st.psy=1.4;}else if(t>.8){const lt=(t-.8)/.2;st.psx=.85+lt*.45;st.psy=1.4-lt*.7;}else{st.psx=.9;st.psy=1.2;}if(t>=1){const np=pl[st.npi];if(pin(st.pwx,st.pwz,np)){const pc=prec(st.pwx,st.pwz,np);let bn,tx;if(pc>P.PT){bn=3;tx='完美!';st.cb++;}else if(pc>P.NT){bn=2;tx='不错';st.cb++;}else{bn=1;tx='+1';st.cb=0;}st.mc=Math.max(st.mc,st.cb);st.sc+=bn*(1+Math.floor(st.cb/P.CBD));st.pwy=P.PH;sp(st.pwx,st.pwz,P.PH,pc);spp(st.pwx,st.pwz,P.PH+20,tx,bn);st.cpi++;st.npi++;gnp();if(st.cpi>2){pl=pl.slice(st.cpi-1);st.cpi=1;st.npi=2;}setTimeout(()=>{st.psx=1;st.psy=1;},150);st.ph='idle';st.psk=0;st.pbo=0;st.prt=0;_land(pc);}else if(pin(st.pwx,st.pwz,pl[st.cpi])){st.pwy=P.PH;st.prt=0;st.ph='idle';st.psk=0;st.pbo=0;_land(0.5);setTimeout(()=>{st.psx=1;st.psy=1;},150);}else{st.ph='falling';st.prt=0;_fall();}}}
+function updf(dt){if(st.pwy>0){st.pwy-=400*dt;if(st.pwy<0)st.pwy=0;}if(st.pwy<=0){st.pwy=0;st.prt+=3.5*dt;if(st.prt>Math.PI/2){st.prt=Math.PI/2;go();}}}
+
+// ── 输入 ──
+function onP(e){e.preventDefault();if(st.ph!=='idle')return;st.ph='charging';st.csrt=performance.now();st.cpp=0;document.getElementById('instructions').style.opacity='.3';}
+function onR(e){e.preventDefault();if(st.ph!=='charging')return;stj();document.getElementById('instructions').style.opacity='1';}
+cv.addEventListener('mousedown',onP);cv.addEventListener('mouseup',onR);cv.addEventListener('mouseleave',onR);
+cv.addEventListener('touchstart',onP,{passive:!1});cv.addEventListener('touchend',onR,{passive:!1});cv.addEventListener('touchcancel',onR,{passive:!1});
+window.addEventListener('keydown',e=>{if(e.code==='Space'||e.code==='KeyJ')onP(e);});
+window.addEventListener('keyup',e=>{if(e.code==='Space'||e.code==='KeyJ')onR(e);});
+
+// ── HUD ──
+function uh(){document.getElementById('score').textContent=st.sc;const ce=document.getElementById('combo');if(st.cb>=3){ce.textContent=st.cb+' 连击';ce.classList.add('show');}else ce.classList.remove('show');}
+function showOverlay(id){['homeScreen','charScreen','gameOver','pauseScreen','gachaScreen','exchangeScreen','collectionScreen','redeemScreen'].forEach(x=>document.getElementById(x).classList.remove('show'));document.getElementById(id).classList.add('show');}
+
+// ── 抽奖系统 ──
+function rollPrize(){
+  const total=Object.values(RARITY_WEIGHT).reduce((a,b)=>a+b,0);
+  let r=Math.random()*total;
+  for(const[k,v]of Object.entries(RARITY_WEIGHT)){r-=v;if(r<=0){const pool=PRIZES.filter(p=>p.r===k);return pool[Math.random()*pool.length|0];}}
+  return PRIZES[0];
+}
+function doPull(n){
+  if(st.dia<n){alert('钻石不足！');return;}
+  st.dia-=n;saveData();
+  const results=[];
+  for(let i=0;i<n;i++)results.push(rollPrize());
+  results.forEach(p=>{if(!st.col.has(p.id))st.col.add(p.id);else st.gold+=DUP_GOLD[p.r];});
+  saveData();
+  _gachaPull();showPullSequence(results,0);
+}
+let _skipFlag=false,_st1=0,_st2=0;
+function showPullSequence(results,idx){
+  var total=results.length;
+  if(_skipFlag||idx>=total){_skipFlag=false;clearTimeout(_st1);clearTimeout(_st2);showPullSummary(results);return;}
+  const p=results[idx],dup=results.slice(0,idx).some(r=>r.id===p.id);
+  const rc={'common':'普通','rare':'稀有','epic':'史诗','legend':'传说'};
+  const rcls='r'+p.r.charAt(0).toUpperCase()+p.r.slice(1);
+  const card=document.getElementById('grCard');
+  card.className='gachaCard '+rcls+' animIn';card.style.display='';if(p.r==='legend')_gachaLegend();else if(p.r==='epic'||p.r==='rare')_gachaRare();
+  document.getElementById('grIcon').textContent=p.ico;
+  document.getElementById('grName').textContent=p.n;
+  document.getElementById('grRarity').innerHTML='<span class="'+rcls+'">'+rc[p.r]+'</span>';
+  const badge=document.getElementById('grBadge');
+  if(dup){badge.className='cardBadge dup';badge.textContent='重复 +'+DUP_GOLD[p.r]+'🪙';}
+  else{badge.className='cardBadge new';badge.textContent=p.id==='p20'?'🎉 角色解锁!':'新图鉴解锁!';}
+  document.getElementById('grSummary').style.display='none';
+  document.getElementById('grCounter').textContent=(idx+1)+' / '+total;
+  document.getElementById('btnGrClose').style.display='none';
+  document.getElementById('btnGrSkip').style.display=total>1?'inline-block':'none';
+  document.getElementById('btnGrSkip').onclick=function(){_skipFlag=true;clearTimeout(_st1);clearTimeout(_st2);showPullSummary(results);};
+  document.getElementById('gachaResult').classList.add('show');
+  var dly=total>1?550:900;
+  _st1=setTimeout(function(){
+    if(_skipFlag)return;
+    card.classList.remove('animIn');card.classList.add('animOut');
+    _st2=setTimeout(function(){card.classList.remove('animOut');showPullSequence(results,idx+1);},200);
+  },dly);
+}
+function showPullSummary(results){
+  var card=document.getElementById('grCard');card.style.display='none';
+  document.getElementById('grCounter').textContent='';
+  document.getElementById('btnGrSkip').style.display='none';
+  var sg=document.getElementById('grSummary');sg.style.display='flex';sg.innerHTML='';
+  var counted={};
+  results.forEach(function(p){var k=p.id;counted[k]=counted[k]||{ico:p.ico,n:p.n,r:p.r,count:0};counted[k].count++;});
+  Object.values(counted).forEach(function(p){
+    var rcls='r'+p.r.charAt(0).toUpperCase()+p.r.slice(1);
+    var d=document.createElement('div');d.className='si '+rcls;
+    d.innerHTML='<div class="sico">'+p.ico+'</div><div>'+p.n+'</div>'+(p.count>1?'<div class="sdup">x'+p.count+'</div>':'');
+    sg.appendChild(d);
+  });
+  document.getElementById('btnGrClose').style.display='';
+  document.getElementById('btnGrClose').onclick=function(){
+    document.getElementById('gachaResult').classList.remove('show');
+    card.style.display='';sg.style.display='none';updateAllDisplays();
+    if(results.some(function(r){return r.id==='p20';})){chSel='lifei';buildCharSelect();}
+  };
+}
+
+function updateAllDisplays(){
+  document.getElementById('goldDisplay').textContent=st.gold;
+  document.getElementById('diaDisplay').textContent=st.dia;
+  ['gGoldDisplay','exGold'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=st.gold;});
+  ['gDiaDisplay'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=st.dia;});
+}
+
+function buildCollection(){
+  const cg=document.getElementById('colGrid'),unlocked=st.col.size;
+  document.getElementById('colProgress').textContent=`已收集 ${unlocked}/${PRIZES.length}`;
+  cg.innerHTML='';
+  PRIZES.forEach(p=>{
+    const has=st.col.has(p.id);
+    const d=document.createElement('div');d.className='ci'+(has?' unlocked':'');
+    d.innerHTML=`<div class="ico">${has?p.ico:'❓'}</div><div>${has?p.n:'???'}</div>`;
+    if(!has){const lk=document.createElement('div');lk.className='lock';lk.textContent='🔒';d.appendChild(lk);}
+    cg.appendChild(d);
+  });
+}
+
+// ── 兑换 ──
+function updateExCost(){
+  const n=parseInt(document.getElementById('exInput').value)||1;
+  document.getElementById('exCost').textContent=`需要 ${n*10} 金币 = ${n}💎`;
+}
+function doExchange(){
+  const n=parseInt(document.getElementById('exInput').value)||0;
+  if(n<=0)return;
+  const cost=n*10;
+  if(st.gold<cost){alert('金币不足！');return;}
+  st.gold-=cost;st.dia+=n;saveData();updateAllDisplays();
+  document.getElementById('exGold').textContent=st.gold;
+}
+
+// ── 兑换码 ──
+function doRedeem(){
+  const code=document.getElementById('redeemInput').value.trim();
+  const msg=document.getElementById('redeemMsg');
+  msg.style.color='rgba(0,0,0,.3)';
+  if(code==='zxm96638'){st.dia+=9999;saveData();updateAllDisplays();msg.style.color='#5b9ad5';msg.textContent='✅ 获得 9999 💎！';}
+  else if(code==='zxm38966'){st.gold=0;st.dia=0;saveData();updateAllDisplays();msg.style.color='#e74c3c';msg.textContent='🗑️ 金币钻石已清零';}
+  else{msg.style.color='#e74c3c';msg.textContent='❌ 兑换码无效';}
+  document.getElementById('redeemInput').value='';
+}
+
+// ── 角色选择 UI ──
+function buildCharSelect(){
+  const hasLifei=st.col.has('p20');
+  const cg=document.getElementById('charGrid'),chars=[
+    {id:'chess',name:'国际象棋兵',chess:!0},
+    {id:'lifei',name:'李飞',chess:!1,locked:!hasLifei}
+  ];
+  cg.innerHTML='';
+  chars.forEach(ch=>{
+    const card=document.createElement('div');card.className='charCard'+(ch.id===chSel?' sel':'')+(ch.locked?' locked':'');
+    const pv=document.createElement('div');pv.className='pv';
+    const cnv=document.createElement('canvas');cnv.width=55;cnv.height=60;
+    const cc=cnv.getContext('2d');
+    if(ch.chess){
+      cc.save();cc.translate(27,52);cc.scale(.6,.6);
+      const segs=[{yb:0,yt:-4,rb:8,rt:5.5,b:!0},{yb:-5,yt:-16,rb:4.5,rt:3.8,b:!1},{yb:-18,yt:-20,rb:4,rt:6.5,b:!1},{yb:-20,yt:-21.5,rb:6.5,rt:3.5,b:!1},{yb:-21.5,yt:-25,rb:3.5,rt:3.5,b:!1}];
+      for(const sg of segs){const{yb,yt,rb,rt,b}=sg;cc.fillStyle='#333';cc.beginPath();cc.moveTo(-rb,yb);cc.lineTo(rb,yb);cc.lineTo(rt,yt);cc.lineTo(-rt,yt);cc.closePath();cc.fill();cc.fillStyle='#3d3d3d';cc.beginPath();cc.ellipse(0,yt,rt,rt*.55,0,0,Math.PI*2);cc.fill();if(b){cc.fillStyle='#1a1a1a';cc.beginPath();cc.ellipse(0,yb,rb,rb*.55,0,0,Math.PI*2);cc.fill();}}
+      cc.fillStyle='#333';cc.beginPath();cc.arc(0,-27,5,0,Math.PI*2);cc.fill();
+      cc.restore();
+    }else{
+      if(IMG.complete&&IMG.naturalWidth){const ih=48,iw=ih*(IMG.naturalWidth/IMG.naturalHeight);cc.drawImage(IMG,(55-iw)/2,60-ih,iw,ih);}
+      else{cc.fillStyle='#666';cc.font='10px sans-serif';cc.textAlign='center';cc.fillText('加载中',27,35);}
+    }
+    pv.appendChild(cnv);const nm=document.createElement('div');nm.className='nm';nm.textContent=ch.name;
+    card.appendChild(pv);card.appendChild(nm);
+    card.onclick=()=>{chSel=ch.id;buildCharSelect();};
+    cg.appendChild(card);
+  });
+}
+
+// ── 页面切换 ──
+document.getElementById('btnStart').onclick=sg;
+document.getElementById('btnChar').onclick=()=>{buildCharSelect();showOverlay('charScreen');};
+document.getElementById('btnBack').onclick=()=>showOverlay('homeScreen');
+document.getElementById('restartBtn').onclick=sg;
+document.getElementById('btnGacha').onclick=()=>{updateAllDisplays();showOverlay('gachaScreen');};
+document.getElementById('btnCollection').onclick=()=>{buildCollection();showOverlay('collectionScreen');};
+document.getElementById('btnGachaBack').onclick=()=>{updateAllDisplays();showOverlay('homeScreen');};
+document.getElementById('btnColBack').onclick=()=>showOverlay('homeScreen');
+document.getElementById('btnExchange').onclick=()=>{document.getElementById('exGold').textContent=st.gold;updateExCost();showOverlay('exchangeScreen');};
+document.getElementById('btnExBack').onclick=()=>{updateAllDisplays();showOverlay('gachaScreen');};
+document.getElementById('btnDoExchange').onclick=doExchange;
+document.getElementById('exInput').oninput=updateExCost;
+document.getElementById('btnPull1').onclick=()=>doPull(1);
+document.getElementById('btnPull10').onclick=()=>doPull(10);
+document.getElementById('pauseBtn').onclick=()=>{st._prevPh=st.ph;st.ph='paused';showOverlay('pauseScreen');};
+document.getElementById('btnResume').onclick=()=>{st.ph=st._prevPh;['homeScreen','charScreen','gameOver','pauseScreen','gachaScreen','exchangeScreen','collectionScreen','redeemScreen'].forEach(x=>document.getElementById(x).classList.remove('show'));};
+document.getElementById('btnPauseHome').onclick=()=>{st.ph='start';document.getElementById('pauseBtn').style.display='none';document.getElementById('hud').style.display='none';document.getElementById('instructions').style.display='none';updateAllDisplays();showOverlay('homeScreen');};
+document.getElementById('btnRedeem').onclick=()=>{document.getElementById('redeemInput').value='';document.getElementById('redeemMsg').textContent='';showOverlay('redeemScreen');};
+document.getElementById('btnDoRedeem').onclick=doRedeem;
+document.getElementById('btnRedBack').onclick=()=>{updateAllDisplays();showOverlay('homeScreen');};
+
+// ── 流程 ──
+function sg(){
+  st.ph='idle';st.sc=0;st.cb=0;st.mc=0;st.psx=1;st.psy=1;st.prt=0;st.pwy=P.PH;st.cx=0;st.cz=0;st.psk=0;st.pbo=0;st._bv=0;st.pt=[];st.pp=[];st.cpi=0;st.npi=1;
+  inp();st.pwx=pl[0].wx;st.pwz=pl[0].wz;
+  ['homeScreen','charScreen','gameOver','pauseScreen','gachaScreen','exchangeScreen','collectionScreen','redeemScreen'].forEach(x=>document.getElementById(x).classList.remove('show'));
+  document.getElementById('hud').style.display='block';
+  document.getElementById('instructions').style.display='block';
+  document.getElementById('pauseBtn').style.display='block';
+  uh();
+}
+function go(){st.ph='over';if(st.sc>st.bs){st.bs=st.sc;try{localStorage.setItem('jb',st.bs);}catch(e){}}st.gold+=st.sc;saveData();document.getElementById('finalScore').textContent=st.sc;document.getElementById('maxComboStat').textContent=st.mc;document.getElementById('bestScore').textContent=st.bs;updateAllDisplays();document.getElementById('pauseBtn').style.display='none';showOverlay('gameOver');}
+
+// ── 主循环 ──
+let lt=0;
+function gl(ts){let dt=lt?(ts-lt)/1000:.016;dt=Math.min(dt,.1);lt=ts;if(st.ph!=='start'&&st.ph!=='over'&&st.ph!=='paused')upd(dt);if(Math.floor(ts/200)!==Math.floor((ts-dt*1000)/200))uh();render();requestAnimationFrame(gl);}
+
+// ── 启动 ──
+loadData();
+st.bs=parseInt(localStorage.getItem('jb')||'0');
+document.getElementById('bestScore').textContent=st.bs;
+updateAllDisplays();
+showOverlay('homeScreen');
+requestAnimationFrame(gl);
+IMG.onload=()=>{buildCharSelect();};
+</script>
+</body>
+</html>
