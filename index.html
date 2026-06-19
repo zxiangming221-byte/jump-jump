@@ -217,6 +217,9 @@ button.accent:hover{background:#4a8bc5;border-color:#4a8bc5}
     <button id="btnColBack">返 回</button>
   </div>
 
+  <!-- LZH 全屏特效 -->
+  <div id="lzhScreen"><div class="lzhText">来自LZH的认可</div></div>
+
   <!-- 兑换码 -->
   <div id="redeemScreen" class="overlay">
     <h1>兑换码</h1>
@@ -509,7 +512,6 @@ function buildCollection(){
     const has=st.col.has(p.id);
     const d=document.createElement('div');d.className='ci'+(has?' unlocked':'');
     d.innerHTML=`<div class="ico">${has?p.ico:'❓'}</div><div>${has?p.n:'???'}
-  <div id="lzhScreen"><div class="lzhText">来自LZH的认可</div></div>
 </div>`;
     if(!has){const lk=document.createElement('div');lk.className='lock';lk.textContent='🔒';d.appendChild(lk);}
     cg.appendChild(d);
