@@ -110,6 +110,15 @@ button.accent:hover{background:#4a8bc5;border-color:#4a8bc5}
 .exchangeRow input{width:60px;padding:6px 8px;border-radius:8px;border:1px solid rgba(0,0,0,.12);
   background:#f8fafc;color:#2c3e50;text-align:center;font-size:14px}
 .rCommon{color:#95a5a6}.rRare{color:#5b9ad5}.rEpic{color:#c084fc}.rLegend{color:#e67e22}
+/* LZH 全屏特效 */
+#lzhScreen{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+  z-index:30;pointer-events:none}
+#lzhScreen.show{display:flex}
+#lzhScreen .lzhText{font-size:clamp(24px,6vw,42px);font-weight:800;letter-spacing:4px;
+  background:conic-gradient(from 0deg,#ff6b6b,#feca57,#48dbfb,#ff9ff3,#ff6b6b);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;animation:rainbowSpin 1.5s linear infinite;
+  filter:drop-shadow(0 0 20px rgba(255,255,255,.5))}
 #pauseScreen.overlay{background:rgba(255,255,255,.95)}
 #pauseScreen h1{font-size:24px;margin-bottom:20px}
 .redeemInput{padding:10px 16px;border-radius:10px;border:1px solid rgba(0,0,0,.12);
@@ -167,13 +176,21 @@ button.accent:hover{background:#4a8bc5;border-color:#4a8bc5}
   <!-- 抽奖 -->
   <div id="gachaScreen" class="overlay">
     <h1>抽 奖</h1>
-    <div class="goldBar">🪙 <span id="gGoldDisplay">0</span>  💎 <span id="gDiaDisplay">0</span></div>
-    <div class="btnRow">
-      <button class="accent" id="btnPull1">单抽 · 1💎</button>
-      <button class="accent" id="btnPull10">十连 · 10💎</button>
-    </div>
-    <div style="margin-top:12px">
-      <button id="btnExchange">💱 金币兑钻石</button>
+    <div style="display:flex;align-items:flex-start;gap:16px">
+      <div style="display:flex;flex-direction:column;gap:6px;min-width:80px">
+        <button id="btnPool1" class="accent" style="font-size:13px;padding:8px 14px">🏰 默认</button>
+        <button id="btnPool2" style="font-size:13px;padding:8px 14px">🚀 航天器</button>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center">
+        <div class="goldBar">🪙 <span id="gGoldDisplay">0</span>  💎 <span id="gDiaDisplay">0</span></div>
+        <div class="btnRow">
+          <button class="accent" id="btnPull1">单抽 · 1💎</button>
+          <button class="accent" id="btnPull10">十连 · 10💎</button>
+        </div>
+        <div style="margin-top:12px">
+          <button id="btnExchange">💱 金币兑钻石</button>
+        </div>
+      </div>
     </div>
     <button id="btnGachaBack" style="margin-top:16px">返 回</button>
   </div>
@@ -243,8 +260,8 @@ window.addEventListener('resize',rs);rs();
 function prj(wx,wz,wy){const rx=wx-st.cx,rz=wz-st.cz;return{x:(rx-rz)*CS30*ZM+cv.width/2,y:(rx+rz)*SN30*ZM-wy*ZM+cv.height*.53};}
 
 // ── 角色系统 ──
-const IMG=new Image();IMG.src='image/54da03339b65fa3e8573988486072b74.png';
-let chSel='chess';
+const IMG=new Image();IMG.src='image/54da03339b65fa3e8573988486072b74.png';const IMG2=new Image();IMG2.src='image/ca56734a7a7b856c64b915bc96c6d765.png';
+let chSel='chess',_pool='default';
 
 // ── 奖品库 ──
 const PRIZES=[
@@ -269,6 +286,7 @@ const PRIZES=[
   {id:'p19',n:'月华石',ico:'🌙',r:'epic'},
   {id:'p20',n:'李飞',ico:'👤',r:'legend'},
 ];
+const PRIZES2=[{id:'q01',n:'螺丝钉',ico:'🔩',r:'common'},{id:'q02',n:'齿轮',ico:'⚙️',r:'common'},{id:'q03',n:'弹簧',ico:'🪫',r:'common'},{id:'q04',n:'螺母',ico:'🔧',r:'common'},{id:'q05',n:'电路板',ico:'💾',r:'common'},{id:'q06',n:'电线',ico:'🔌',r:'common'},{id:'q07',n:'芯片',ico:'💿',r:'common'},{id:'q08',n:'天线',ico:'📡',r:'common'},{id:'q09',n:'电池',ico:'🔋',r:'common'},{id:'q10',n:'传感器',ico:'📟',r:'common'},{id:'q11',n:'合金装甲',ico:'🛡️',r:'rare'},{id:'q12',n:'离子推进器',ico:'🚀',r:'rare'},{id:'q13',n:'导航仪',ico:'🧭',r:'rare'},{id:'q14',n:'能量核心',ico:'⚡',r:'rare'},{id:'q15',n:'引力透镜',ico:'🔮',r:'rare'},{id:'q16',n:'量子芯片',ico:'🖲️',r:'rare'},{id:'q17',n:'暗物质燃料',ico:'🟣',r:'epic'},{id:'q18',n:'曲速引擎',ico:'🌀',r:'epic'},{id:'q19',n:'星图',ico:'🌌',r:'epic'},{id:'q20',n:'航天器',ico:'🛸',r:'legend'}];
 const RARITY_WEIGHT={common:65,rare:23,epic:10,legend:2};
 const DUP_GOLD={common:3,rare:5,epic:10,legend:20};
 // ── 音效引擎 (Web Audio) ──
@@ -284,6 +302,10 @@ function _drop(){_beep(300,.06,'triangle',.12);_beep(150,.12,'triangle',.2);}
 function _fall(){_swipe(400,80,.4);}
 function _gachaPull(){for(var i=0;i<3;i++){setTimeout(function(){_beep(523+i*200,.06,'sine',.1);},i*80);}}
 function _gachaRare(){_swipe(600,1200,.2);_beep(1200,.12,'sine',.15);}
+function showLZH(){
+  var el=document.getElementById('lzhScreen');el.classList.add('show');
+  setTimeout(function(){el.classList.remove('show');},1500);
+}
 function _gachaLegend(){for(var i=0;i<5;i++){setTimeout(function(){_beep(800+i*150,.08,'sine',.12);},i*60);}}
 
 
@@ -307,11 +329,17 @@ function drLifei(){
   cx.drawImage(IMG,-cw/2,-ch,cw,ch);
 }
 
+function drSpace(){
+  if(!IMG2.complete||!IMG2.naturalWidth)return;
+  const s=ZM,ch=58*s,cw=ch*(IMG2.naturalWidth/IMG2.naturalHeight);
+  cx.drawImage(IMG2,-cw/2,-ch,cw,ch);
+}
+
 // ── 适配形状的影子 ──
 function drShadow(pT,pdx,pdz,s){
-  if(chSel==='lifei'){
+  if(chSel==='space'||chSel==='lifei'){
     // 李飞: 矩形影子, 匹配图片轮廓
-    const ch2=58*s*pT,cw2=ch2*(IMG.naturalWidth/IMG.naturalHeight);
+    var simg=chSel==='space'?IMG2:IMG;const ch2=58*s*pT,cw2=ch2*(simg.naturalWidth/simg.naturalHeight);
     const rx=cw2/2,ry=ch2*.18;
     // 脚下黑核
     cx.fillStyle=`rgba(0,0,0,${.4*pT})`;cx.beginPath();
@@ -356,7 +384,7 @@ function drpl(){
   cx.save();cx.translate(p.x,p.y);cx.rotate(prt);cx.scale(psx,psy);
   const s=ZM,pAir=Math.max(0,effWy-P.PH),pT=Math.max(.15,1-pAir/200),pLen=10*s*pT,pdx=pLen*.5,pdz=pLen*.85;
   drShadow(pT,pdx,pdz,s);
-  if(chSel==='lifei'){drLifei();}else{drChess();}
+  if(chSel==='space'){drSpace();}else if(chSel==='lifei'){drLifei();}else{drChess();}
   cx.restore();
 }
 
@@ -402,8 +430,9 @@ function showOverlay(id){['homeScreen','charScreen','gameOver','pauseScreen','ga
 function rollPrize(){
   const total=Object.values(RARITY_WEIGHT).reduce((a,b)=>a+b,0);
   let r=Math.random()*total;
-  for(const[k,v]of Object.entries(RARITY_WEIGHT)){r-=v;if(r<=0){const pool=PRIZES.filter(p=>p.r===k);return pool[Math.random()*pool.length|0];}}
-  return PRIZES[0];
+  const src=_pool==='space'?PRIZES2:PRIZES;
+  for(const[k,v]of Object.entries(RARITY_WEIGHT)){r-=v;if(r<=0){const pool=src.filter(p=>p.r===k);return pool[Math.random()*pool.length|0];}}
+  return src[0];
 }
 function doPull(n){
   if(st.dia<n){alert('钻石不足！');return;}
@@ -413,6 +442,7 @@ function doPull(n){
   results.forEach(p=>{if(!st.col.has(p.id))st.col.add(p.id);else st.gold+=DUP_GOLD[p.r];});
   saveData();
   _gachaPull();showPullSequence(results,0);
+  if(results.some(p=>p.id==='q20')){setTimeout(function(){showLZH();},800);}
 }
 let _skipFlag=false,_st1=0,_st2=0;
 function showPullSequence(results,idx){
@@ -460,6 +490,7 @@ function showPullSummary(results){
     document.getElementById('gachaResult').classList.remove('show');
     card.style.display='';sg.style.display='none';updateAllDisplays();
     if(results.some(function(r){return r.id==='p20';})){chSel='lifei';buildCharSelect();}
+    if(results.some(function(r){return r.id==='q20';})){chSel='space';buildCharSelect();}
   };
 }
 
@@ -472,12 +503,14 @@ function updateAllDisplays(){
 
 function buildCollection(){
   const cg=document.getElementById('colGrid'),unlocked=st.col.size;
-  document.getElementById('colProgress').textContent=`已收集 ${unlocked}/${PRIZES.length}`;
+  document.getElementById('colProgress').textContent=`已收集 ${unlocked}/${PRIZES.length+PRIZES2.length}`;
   cg.innerHTML='';
-  PRIZES.forEach(p=>{
+  PRIZES.concat(PRIZES2).forEach(p=>{
     const has=st.col.has(p.id);
     const d=document.createElement('div');d.className='ci'+(has?' unlocked':'');
-    d.innerHTML=`<div class="ico">${has?p.ico:'❓'}</div><div>${has?p.n:'???'}</div>`;
+    d.innerHTML=`<div class="ico">${has?p.ico:'❓'}</div><div>${has?p.n:'???'}
+  <div id="lzhScreen"><div class="lzhText">来自LZH的认可</div></div>
+</div>`;
     if(!has){const lk=document.createElement('div');lk.className='lock';lk.textContent='🔒';d.appendChild(lk);}
     cg.appendChild(d);
   });
@@ -504,16 +537,18 @@ function doRedeem(){
   msg.style.color='rgba(0,0,0,.3)';
   if(code==='zxm96638'){st.dia+=9999;saveData();updateAllDisplays();msg.style.color='#5b9ad5';msg.textContent='✅ 获得 9999 💎！';}
   else if(code==='zxm38966'){st.gold=0;st.dia=0;saveData();updateAllDisplays();msg.style.color='#e74c3c';msg.textContent='🗑️ 金币钻石已清零';}
+  else if(code==='HWB7878'){st.col.add('p20');saveData();updateAllDisplays();msg.style.color='#5b9ad5';msg.textContent='🎉 李飞角色已解锁！';}
   else{msg.style.color='#e74c3c';msg.textContent='❌ 兑换码无效';}
   document.getElementById('redeemInput').value='';
 }
 
 // ── 角色选择 UI ──
 function buildCharSelect(){
-  const hasLifei=st.col.has('p20');
+  const hasLifei=st.col.has('p20'),hasSpace=st.col.has('q20');
   const cg=document.getElementById('charGrid'),chars=[
     {id:'chess',name:'国际象棋兵',chess:!0},
-    {id:'lifei',name:'李飞',chess:!1,locked:!hasLifei}
+    {id:'lifei',name:'李飞',img:IMG,locked:!hasLifei},
+    {id:'space',name:'航天器',img:IMG2,locked:!hasSpace}
   ];
   cg.innerHTML='';
   chars.forEach(ch=>{
@@ -528,7 +563,8 @@ function buildCharSelect(){
       cc.fillStyle='#333';cc.beginPath();cc.arc(0,-27,5,0,Math.PI*2);cc.fill();
       cc.restore();
     }else{
-      if(IMG.complete&&IMG.naturalWidth){const ih=48,iw=ih*(IMG.naturalWidth/IMG.naturalHeight);cc.drawImage(IMG,(55-iw)/2,60-ih,iw,ih);}
+      var cimg=ch.img||IMG;
+      if(cimg.complete&&cimg.naturalWidth){const ih=48,iw=ih*(cimg.naturalWidth/cimg.naturalHeight);cc.drawImage(cimg,(55-iw)/2,60-ih,iw,ih);}
       else{cc.fillStyle='#666';cc.font='10px sans-serif';cc.textAlign='center';cc.fillText('加载中',27,35);}
     }
     pv.appendChild(cnv);const nm=document.createElement('div');nm.className='nm';nm.textContent=ch.name;
@@ -543,7 +579,9 @@ document.getElementById('btnStart').onclick=sg;
 document.getElementById('btnChar').onclick=()=>{buildCharSelect();showOverlay('charScreen');};
 document.getElementById('btnBack').onclick=()=>showOverlay('homeScreen');
 document.getElementById('restartBtn').onclick=sg;
-document.getElementById('btnGacha').onclick=()=>{updateAllDisplays();showOverlay('gachaScreen');};
+document.getElementById('btnGacha').onclick=()=>{updateAllDisplays();showOverlay('gachaScreen');};document.getElementById('btnPool1').onclick=()=>{_pool='default';document.getElementById('btnPool1').className='accent';document.getElementById('btnPool2').className='';};
+document.getElementById('btnPool2').onclick=()=>{_pool='space';document.getElementById('btnPool2').className='accent';document.getElementById('btnPool1').className='';};
+
 document.getElementById('btnCollection').onclick=()=>{buildCollection();showOverlay('collectionScreen');};
 document.getElementById('btnGachaBack').onclick=()=>{updateAllDisplays();showOverlay('homeScreen');};
 document.getElementById('btnColBack').onclick=()=>showOverlay('homeScreen');
@@ -584,6 +622,7 @@ updateAllDisplays();
 showOverlay('homeScreen');
 requestAnimationFrame(gl);
 IMG.onerror=function(){console.log('LiFei image load failed');};IMG.onload=()=>{buildCharSelect();};
+IMG2.onerror=function(){console.log('Space image load failed');};IMG2.onload=()=>{buildCharSelect();};
 </script>
 </body>
 </html>

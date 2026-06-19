@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#0f0f1a;
+    font-family:-apple-system,sans-serif;user-select:none}
+  #container{position:relative;width:100%;max-width:480px;height:100%;margin:0 auto;overflow:hidden}
+  canvas{display:block;width:100%;height:100%}
+  #startScreen{position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;background:rgba(26,26,46,.85);z-index:10}
+  button{padding:12px 36px;font-size:16px;border-radius:24px;cursor:pointer;border:none;
+    background:rgba(255,255,255,.15);color:#fff}
+</style></head>
+<body>
+<div id="container">
+  <canvas id="c"></canvas>
+  <div id="startScreen">
+    <h1 style="color:#fff">TEST</h1>
+    <button onclick="alert('click works!')">CLICK ME</button>
+  </div>
+</div>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+canvas.width = 400;
+canvas.height = 600;
+ctx.fillStyle = '#ff0000';
+ctx.fillRect(0,0,400,600);
+alert('script loaded');
+</script>
+</body>
+</html>
