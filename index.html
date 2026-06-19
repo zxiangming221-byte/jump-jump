@@ -99,13 +99,22 @@ button.accent:hover{background:#4a8bc5;border-color:#4a8bc5}
 .gachaGrid .gi{width:56px;height:68px;border-radius:10px;display:flex;flex-direction:column;
   align-items:center;justify-content:center;border:1px solid rgba(0,0,0,.06);font-size:10px;color:rgba(0,0,0,.25);background:#fafbfc}
 .gachaGrid .gi.unlocked{border-color:rgba(91,154,213,.3);color:#5b9ad5;background:#f0f6fb}
-.collectionGrid{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-start;padding:4px 8px 16px}
-.collectionGrid .ci{width:22%;min-width:64px;height:88px;border-radius:12px;display:flex;flex-direction:column;flex-grow:1;
-  align-items:center;justify-content:center;border:1px solid rgba(0,0,0,.06);font-size:10px;
-  color:rgba(0,0,0,.25);position:relative;background:#fafbfc}
-.collectionGrid .ci.rCommon{border:2px solid #bdc3c7}.collectionGrid .ci.unlocked.rCommon{border-color:#95a5a6;color:#2c3e50;background:#fff}.collectionGrid .ci.rRare{border:2px solid #5b9ad5}.collectionGrid .ci.unlocked.rRare{border-color:#5b9ad5;color:#2c3e50;background:#f0f6fb}.collectionGrid .ci.rEpic{border:2px solid #c084fc}.collectionGrid .ci.unlocked.rEpic{border-color:#c084fc;color:#2c3e50;background:#fdf5ff}.collectionGrid .ci.rLegend{border:2px solid #ff8c00}.collectionGrid .ci.unlocked.rLegend{border-color:#ff8c00;color:#2c3e50;background:#fff8f0}
-.collectionGrid .ci .ico{font-size:24px;margin-bottom:2px}
-.collectionGrid .ci .lock{position:absolute;font-size:14px;opacity:.5}
+.collectionGrid{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-start;padding:4px 12px 6px}
+.colGridSection{margin-bottom:12px;width:100%}
+.colGridSection .secLabel{font-size:11px;font-weight:600;padding:3px 10px;border-radius:6px;display:inline-block;margin-bottom:6px;color:#fff}
+.colGridSection .secLabel.lCommon{background:#bdc3c7}.colGridSection .secLabel.lRare{background:#5b9ad5}
+.colGridSection .secLabel.lEpic{background:#c084fc}.colGridSection .secLabel.lLegend{background:#ff8c00}
+.colGridSection .secRow{display:flex;flex-wrap:wrap;gap:8px}
+.colGridSection .ci{width:calc(25% - 6px);min-width:62px;height:82px;border-radius:12px;display:flex;
+  flex-direction:column;align-items:center;justify-content:center;font-size:10px;
+  color:rgba(0,0,0,.25);position:relative;background:#fafbfc;border:2px solid rgba(0,0,0,.08)}
+.colGridSection .ci.unlocked{color:#2c3e50;background:#fff}
+.colGridSection .secCommon .ci{border-color:#bdc3c7}.colGridSection .secCommon .ci.unlocked{border-color:#95a5a6}
+.colGridSection .secRare .ci{border-color:#5b9ad5}.colGridSection .secRare .ci.unlocked{border-color:#5b9ad5;background:#f0f6fb}
+.colGridSection .secEpic .ci{border-color:#c084fc}.colGridSection .secEpic .ci.unlocked{border-color:#c084fc;background:#fdf5ff}
+.colGridSection .secLegend .ci{border-color:#ff8c00}.colGridSection .secLegend .ci.unlocked{border-color:#ff8c00;background:#fff8f0}
+.colGridSection .ci .ico{font-size:22px;margin-bottom:1px}
+.colGridSection .ci .lock{position:absolute;font-size:12px;opacity:.5}
 .exchangeRow{display:flex;align-items:center;gap:12px;margin:8px 0}
 .exchangeRow input{width:60px;padding:6px 8px;border-radius:8px;border:1px solid rgba(0,0,0,.12);
   background:#f8fafc;color:#2c3e50;text-align:center;font-size:14px}
@@ -216,11 +225,13 @@ button.accent:hover{background:#4a8bc5;border-color:#4a8bc5}
   </div>
 
   <!-- 图鉴 -->
-  <div id="collectionScreen" class="overlay" style="justify-content:flex-start;overflow-y:auto;padding-top:16px">
-    <h1>图 鉴</h1>
-    <div style="font-size:12px;color:rgba(44,62,80,.4);margin-bottom:8px" id="colProgress">已收集 0/20</div>
+  <div id="collectionScreen" class="overlay" style="justify-content:flex-start;overflow-y:auto;padding:16px 12px 60px">
+    <h1 style="margin-bottom:4px">图 鉴</h1>
+    <div style="font-size:12px;color:rgba(44,62,80,.4);margin-bottom:12px" id="colProgress">已收集 0/20</div>
     <div class="collectionGrid" id="colGrid"></div>
-    <button id="btnColBack">返 回</button>
+    <div style="position:sticky;bottom:0;background:linear-gradient(transparent,rgba(255,255,255,.96) 40%,rgba(255,255,255,.96));padding:8px 0 0;text-align:center">
+      <button id="btnColBack">返 回</button>
+    </div>
   </div>
 
   <!-- LZH 全屏特效 -->
@@ -566,16 +577,28 @@ function updateAllDisplays(){
 }
 
 function buildCollection(){
-  const cg=document.getElementById('colGrid'),unlocked=st.col.size;
-  document.getElementById('colProgress').textContent=`已收集 ${unlocked}/${PRIZES.length+PRIZES2.length}`;
+  var cg=document.getElementById('colGrid'),unlocked=st.col.size;
+  document.getElementById('colProgress').textContent='已收集 '+unlocked+'/'+(PRIZES.length+PRIZES2.length);
   cg.innerHTML='';
-  PRIZES.concat(PRIZES2).forEach(p=>{
-    const has=st.col.has(p.id);
-    const d=document.createElement('div');d.className='ci'+(has?' unlocked':'');
-    d.innerHTML=`<div class="ico">${has?p.ico:'❓'}</div><div>${has?p.n:'???'}
-</div>`;
-    if(!has){const lk=document.createElement('div');lk.className='lock';lk.textContent='🔒';d.appendChild(lk);}
-    cg.appendChild(d);
+  var all=PRIZES.concat(PRIZES2);
+  var order=['legend','epic','rare','common'];
+  var labels={legend:'传说',epic:'史诗',rare:'稀有',common:'普通'};
+  order.forEach(function(r){
+    var items=all.filter(function(p){return p.r===r;});
+    if(!items.length)return;
+    var sec=document.createElement('div');sec.className='colGridSection sec'+r.charAt(0).toUpperCase()+r.slice(1);
+    var lb=document.createElement('div');lb.className='secLabel l'+r.charAt(0).toUpperCase()+r.slice(1);
+    lb.textContent=labels[r]+' ('+items.filter(function(p){return st.col.has(p.id);}).length+'/'+items.length+')';
+    sec.appendChild(lb);
+    var row=document.createElement('div');row.className='secRow';
+    items.forEach(function(p){
+      var has=st.col.has(p.id);
+      var d=document.createElement('div');d.className='ci'+(has?' unlocked':'');
+      d.innerHTML='<div class="ico">'+(has?p.ico:'❓')+'</div><div>'+(has?p.n:'???')+'</div>';
+      if(!has){var lk=document.createElement('div');lk.className='lock';lk.textContent='🔒';d.appendChild(lk);}
+      row.appendChild(d);
+    });
+    sec.appendChild(row);cg.appendChild(sec);
   });
 }
 
