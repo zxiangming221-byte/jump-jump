@@ -175,14 +175,17 @@ button.accent:hover{background:#4a8bc5;border-color:#4a8bc5}
 
   <!-- 抽奖 -->
   <div id="gachaScreen" class="overlay">
-    <h1>抽 奖</h1>
     <div style="display:flex;align-items:flex-start;gap:16px">
       <div style="display:flex;flex-direction:column;gap:6px;min-width:80px">
-        <button id="btnPool1" class="accent" style="font-size:13px;padding:8px 14px">🏰 默认</button>
+        <button id="btnPool1" class="accent" style="font-size:13px;padding:8px 14px">👤 李飞</button>
         <button id="btnPool2" style="font-size:13px;padding:8px 14px">🚀 航天器</button>
       </div>
       <div style="flex:1;display:flex;flex-direction:column;align-items:center">
+        <div id="poolTitle" style="font-size:20px;font-weight:600;color:#2c3e50;margin-bottom:2px">李飞卡池</div>
         <div class="goldBar">🪙 <span id="gGoldDisplay">0</span>  💎 <span id="gDiaDisplay">0</span></div>
+        <div id="poolOdds" style="font-size:11px;color:rgba(44,62,80,.4);margin-bottom:6px">
+          普通 65% · 稀有 23% · 史诗 10% · 传说 2%
+        </div>
         <div class="btnRow">
           <button class="accent" id="btnPull1">单抽 · 1💎</button>
           <button class="accent" id="btnPull10">十连 · 10💎</button>
@@ -598,8 +601,8 @@ document.getElementById('btnStart').onclick=sg;
 document.getElementById('btnChar').onclick=()=>{buildCharSelect();showOverlay('charScreen');};
 document.getElementById('btnBack').onclick=()=>showOverlay('homeScreen');
 document.getElementById('restartBtn').onclick=sg;
-document.getElementById('btnGacha').onclick=()=>{updateAllDisplays();showOverlay('gachaScreen');};document.getElementById('btnPool1').onclick=()=>{_pool='default';document.getElementById('btnPool1').className='accent';document.getElementById('btnPool2').className='';};
-document.getElementById('btnPool2').onclick=()=>{_pool='space';document.getElementById('btnPool2').className='accent';document.getElementById('btnPool1').className='';};
+document.getElementById('btnGacha').onclick=()=>{updateAllDisplays();showOverlay('gachaScreen');};document.getElementById('btnPool1').onclick=()=>{_pool='default';document.getElementById('btnPool1').className='accent';document.getElementById('btnPool2').className='';document.getElementById('poolTitle').textContent='李飞卡池';document.getElementById('poolOdds').innerHTML='普通 65% · 稀有 23% · 史诗 10% · 传说 2%';};
+document.getElementById('btnPool2').onclick=()=>{_pool='space';document.getElementById('btnPool2').className='accent';document.getElementById('btnPool1').className='';document.getElementById('poolTitle').textContent='航天器卡池';document.getElementById('poolOdds').innerHTML='普通 65% · 稀有 23% · 史诗 10% · 传说 2%';};
 
 document.getElementById('btnCollection').onclick=()=>{buildCollection();showOverlay('collectionScreen');};
 document.getElementById('btnGachaBack').onclick=()=>{updateAllDisplays();showOverlay('homeScreen');};
