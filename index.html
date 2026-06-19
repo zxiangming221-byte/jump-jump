@@ -445,8 +445,10 @@ function _applyOverlay(id){
   document.getElementById(id).classList.add('show');
 }
 window.addEventListener('popstate',function(e){
-  if(_overlayStack.length>1){_overlayStack.pop();_applyOverlay(_overlayStack[_overlayStack.length-1]);}
-  else{_overlayStack=['homeScreen'];history.replaceState({ov:'homeScreen'},'',location.href);}
+  if(_overlayStack.length>1){_overlayStack.pop();var prev=_overlayStack[_overlayStack.length-1];
+    if(prev==='game'){['homeScreen','charScreen','gameOver','pauseScreen','gachaScreen','exchangeScreen','collectionScreen','redeemScreen'].forEach(function(x){document.getElementById(x).classList.remove('show');});}
+    else{_applyOverlay(prev);}
+  }else{_overlayStack=['homeScreen'];history.replaceState({ov:'homeScreen'},'',location.href);}
 });
 
 // ── 抽奖系统 ──
@@ -614,7 +616,7 @@ document.getElementById('exInput').oninput=updateExCost;
 document.getElementById('btnPull1').onclick=()=>doPull(1);
 document.getElementById('btnPull10').onclick=()=>doPull(10);
 document.getElementById('pauseBtn').onclick=()=>{st._prevPh=st.ph;st.ph='paused';showOverlay('pauseScreen');};
-document.getElementById('btnResume').onclick=()=>{st.ph=st._prevPh;['homeScreen','charScreen','gameOver','pauseScreen','gachaScreen','exchangeScreen','collectionScreen','redeemScreen'].forEach(x=>document.getElementById(x).classList.remove('show'));};
+document.getElementById('btnResume').onclick=()=>{st.ph=st._prevPh;_overlayStack=['game'];history.replaceState({ov:'game'},'',location.href);['homeScreen','charScreen','gameOver','pauseScreen','gachaScreen','exchangeScreen','collectionScreen','redeemScreen'].forEach(x=>document.getElementById(x).classList.remove('show'));};
 document.getElementById('btnPauseHome').onclick=()=>{st.ph='start';document.getElementById('pauseBtn').style.display='none';document.getElementById('hud').style.display='none';document.getElementById('instructions').style.display='none';updateAllDisplays();showOverlay('homeScreen');};
 document.getElementById('btnRedeem').onclick=()=>{document.getElementById('redeemInput').value='';document.getElementById('redeemMsg').textContent='';showOverlay('redeemScreen');};
 document.getElementById('btnDoRedeem').onclick=doRedeem;
@@ -623,6 +625,7 @@ document.getElementById('btnRedBack').onclick=()=>{updateAllDisplays();showOverl
 // ── 流程 ──
 function sg(){
   st.ph='idle';st.sc=0;st.cb=0;st.mc=0;st.psx=1;st.psy=1;st.prt=0;st.pwy=P.PH;st.cx=0;st.cz=0;st.psk=0;st.pbo=0;st._bv=0;st.pt=[];st.pp=[];st.cpi=0;st.npi=1;
+  _overlayStack=['game'];history.replaceState({ov:'game'},'',location.href);
   inp();st.pwx=pl[0].wx;st.pwz=pl[0].wz;
   ['homeScreen','charScreen','gameOver','pauseScreen','gachaScreen','exchangeScreen','collectionScreen','redeemScreen'].forEach(x=>document.getElementById(x).classList.remove('show'));
   document.getElementById('hud').style.display='block';
