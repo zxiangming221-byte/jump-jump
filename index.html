@@ -594,7 +594,16 @@ function buildCollection(){
     items.forEach(function(p){
       var has=st.col.has(p.id);
       var d=document.createElement('div');d.className='ci'+(has?' unlocked':'');
-      d.innerHTML='<div class="ico">'+(has?p.ico:'❓')+'</div><div>'+(has?p.n:'???')+'</div>';
+      var isLegendImg=(p.id==='p20'||p.id==='q20')&&has;
+      if(isLegendImg){
+        var img2=(p.id==='p20')?IMG:IMG2;
+        var cnv2=document.createElement('canvas');cnv2.width=40;cnv2.height=44;cnv2.style.display='block';
+        var cc2=cnv2.getContext('2d');
+        if(img2.complete&&img2.naturalWidth){var ih=40,iw=ih*(img2.naturalWidth/img2.naturalHeight);cc2.drawImage(img2,(40-iw)/2,44-ih,iw,ih);}
+        d.appendChild(cnv2);var nm2=document.createElement('div');nm2.textContent=p.n;nm2.style.marginTop='1px';d.appendChild(nm2);
+      }else{
+        d.innerHTML='<div class=\"ico\">'+(has?p.ico:'❓')+'</div><div>'+(has?p.n:'???')+'</div>';
+      }
       if(!has){var lk=document.createElement('div');lk.className='lock';lk.textContent='🔒';d.appendChild(lk);}
       row.appendChild(d);
     });
