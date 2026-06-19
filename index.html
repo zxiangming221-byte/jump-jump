@@ -99,11 +99,11 @@ button.accent:hover{background:#4a8bc5;border-color:#4a8bc5}
 .gachaGrid .gi{width:56px;height:68px;border-radius:10px;display:flex;flex-direction:column;
   align-items:center;justify-content:center;border:1px solid rgba(0,0,0,.06);font-size:10px;color:rgba(0,0,0,.25);background:#fafbfc}
 .gachaGrid .gi.unlocked{border-color:rgba(91,154,213,.3);color:#5b9ad5;background:#f0f6fb}
-.collectionGrid{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:360px;margin:8px 0 16px}
-.collectionGrid .ci{width:62px;height:80px;border-radius:12px;display:flex;flex-direction:column;
+.collectionGrid{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-start;padding:4px 8px 16px}
+.collectionGrid .ci{width:22%;min-width:64px;height:88px;border-radius:12px;display:flex;flex-direction:column;flex-grow:1;
   align-items:center;justify-content:center;border:1px solid rgba(0,0,0,.06);font-size:10px;
   color:rgba(0,0,0,.25);position:relative;background:#fafbfc}
-.collectionGrid .ci.unlocked{border-color:rgba(91,154,213,.2);color:#2c3e50;background:#fff}
+.collectionGrid .ci.rCommon{border:2px solid #bdc3c7}.collectionGrid .ci.unlocked.rCommon{border-color:#95a5a6;color:#2c3e50;background:#fff}.collectionGrid .ci.rRare{border:2px solid #5b9ad5}.collectionGrid .ci.unlocked.rRare{border-color:#5b9ad5;color:#2c3e50;background:#f0f6fb}.collectionGrid .ci.rEpic{border:2px solid #c084fc}.collectionGrid .ci.unlocked.rEpic{border-color:#c084fc;color:#2c3e50;background:#fdf5ff}.collectionGrid .ci.rLegend{border:2px solid #ff8c00}.collectionGrid .ci.unlocked.rLegend{border-color:#ff8c00;color:#2c3e50;background:#fff8f0}
 .collectionGrid .ci .ico{font-size:24px;margin-bottom:2px}
 .collectionGrid .ci .lock{position:absolute;font-size:14px;opacity:.5}
 .exchangeRow{display:flex;align-items:center;gap:12px;margin:8px 0}
@@ -216,7 +216,7 @@ button.accent:hover{background:#4a8bc5;border-color:#4a8bc5}
   </div>
 
   <!-- 图鉴 -->
-  <div id="collectionScreen" class="overlay">
+  <div id="collectionScreen" class="overlay" style="justify-content:flex-start;overflow-y:auto;padding-top:16px">
     <h1>图 鉴</h1>
     <div style="font-size:12px;color:rgba(44,62,80,.4);margin-bottom:8px" id="colProgress">已收集 0/20</div>
     <div class="collectionGrid" id="colGrid"></div>
