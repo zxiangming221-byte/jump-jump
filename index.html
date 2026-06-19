@@ -123,6 +123,8 @@ button.accent:hover{background:#4a8bc5;border-color:#4a8bc5}
 #pauseScreen h1{font-size:24px;margin-bottom:20px}
 .redeemInput{padding:10px 16px;border-radius:10px;border:1px solid rgba(0,0,0,.12);
   background:#f8fafc;color:#2c3e50;text-align:center;font-size:15px;width:200px;margin:8px 0 16px;letter-spacing:2px}
+
+.devPanel .stat{font-size:13px}
 </style>
 </head>
 <body>
@@ -146,6 +148,7 @@ button.accent:hover{background:#4a8bc5;border-color:#4a8bc5}
       <button id="btnCollection">图 鉴</button>
     </div>
     <button id="btnRedeem" style="margin-top:14px;font-size:12px;color:#95a5a6;border-color:rgba(0,0,0,.08)">兑换码</button>
+    <button id="btnSettings" style="margin-top:6px;font-size:11px;color:#bdc3c7;border-color:rgba(0,0,0,.05)">⚙ 设置</button>
   </div>
 
   <!-- 角色选择 -->
@@ -441,12 +444,12 @@ function showOverlay(id){
   _applyOverlay(id);
 }
 function _applyOverlay(id){
-  ['homeScreen','charScreen','gameOver','pauseScreen','gachaScreen','exchangeScreen','collectionScreen','redeemScreen'].forEach(function(x){document.getElementById(x).classList.remove('show');});
+  ['homeScreen','charScreen','gameOver','pauseScreen','gachaScreen','exchangeScreen','collectionScreen','redeemScreen','settingsScreen','devScreen'].forEach(function(x){document.getElementById(x).classList.remove('show');});
   document.getElementById(id).classList.add('show');
 }
 window.addEventListener('popstate',function(e){
   if(_overlayStack.length>1){_overlayStack.pop();var prev=_overlayStack[_overlayStack.length-1];
-    if(prev==='game'){['homeScreen','charScreen','gameOver','pauseScreen','gachaScreen','exchangeScreen','collectionScreen','redeemScreen'].forEach(function(x){document.getElementById(x).classList.remove('show');});}
+    if(prev==='game'){['homeScreen','charScreen','gameOver','pauseScreen','gachaScreen','exchangeScreen','collectionScreen','redeemScreen','settingsScreen','devScreen'].forEach(function(x){document.getElementById(x).classList.remove('show');});}
     else{_applyOverlay(prev);}
   }else{_overlayStack=['homeScreen'];history.replaceState({ov:'homeScreen'},'',location.href);}
 });
@@ -566,6 +569,41 @@ function doRedeem(){
   document.getElementById('redeemInput').value='';
 }
 
+// ── 设置 / 开发模式 ──
+var _isDev=false;
+function buildDevPanel(){
+  var cp=document.getElementById('devChars');cp.innerHTML='';
+  var chars=[{id:'p20',name:'李飞'},{id:'q20',name:'航天器'}];
+  chars.forEach(function(ch){
+    var has=st.col.has(ch.id);
+    var b=document.createElement('button');
+    b.style.fontSize='12px';b.style.padding='6px 12px';
+    b.textContent=(has?'✅ ':'🔒 ')+ch.name;
+    b.onclick=function(){if(has)st.col.delete(ch.id);else st.col.add(ch.id);saveData();buildDevPanel();buildCharSelect();};
+    cp.appendChild(b);
+  });
+  document.getElementById('devGold').value=st.gold;
+  document.getElementById('devDia').value=st.dia;
+  var codes=[
+    {c:'zxm96638',e:'+9999 💎'},
+    {c:'zxm38966',e:'金币钻石清零'},
+    {c:'HWB7878',e:'解锁李飞'},
+  ];
+  document.getElementById('devCodes').innerHTML=codes.map(function(x){return '<div>'+x.c+' → '+x.e+'</div>';}).join('');
+}
+function unlockDev(){
+  if(document.getElementById('devPwd').value==='zxm121212'){
+    _isDev=true;
+    document.getElementById('devLock').style.display='none';
+    document.getElementById('devPanel').style.display='flex';
+    document.getElementById('devMsg').textContent='';
+    buildDevPanel();
+  }else{
+    document.getElementById('devMsg').style.color='#e74c3c';
+    document.getElementById('devMsg').textContent='❌ 密码错误';
+  }
+}
+
 // ── 角色选择 UI ──
 function buildCharSelect(){
   const hasLifei=st.col.has('p20'),hasSpace=st.col.has('q20');
@@ -616,18 +654,24 @@ document.getElementById('exInput').oninput=updateExCost;
 document.getElementById('btnPull1').onclick=()=>doPull(1);
 document.getElementById('btnPull10').onclick=()=>doPull(10);
 document.getElementById('pauseBtn').onclick=()=>{st._prevPh=st.ph;st.ph='paused';showOverlay('pauseScreen');};
-document.getElementById('btnResume').onclick=()=>{st.ph=st._prevPh;_overlayStack=['game'];history.replaceState({ov:'game'},'',location.href);['homeScreen','charScreen','gameOver','pauseScreen','gachaScreen','exchangeScreen','collectionScreen','redeemScreen'].forEach(x=>document.getElementById(x).classList.remove('show'));};
+document.getElementById('btnResume').onclick=()=>{st.ph=st._prevPh;_overlayStack=['game'];history.replaceState({ov:'game'},'',location.href);['homeScreen','charScreen','gameOver','pauseScreen','gachaScreen','exchangeScreen','collectionScreen','redeemScreen','settingsScreen','devScreen'].forEach(x=>document.getElementById(x).classList.remove('show'));};
 document.getElementById('btnPauseHome').onclick=()=>{st.ph='start';document.getElementById('pauseBtn').style.display='none';document.getElementById('hud').style.display='none';document.getElementById('instructions').style.display='none';updateAllDisplays();showOverlay('homeScreen');};
 document.getElementById('btnRedeem').onclick=()=>{document.getElementById('redeemInput').value='';document.getElementById('redeemMsg').textContent='';showOverlay('redeemScreen');};
 document.getElementById('btnDoRedeem').onclick=doRedeem;
 document.getElementById('btnRedBack').onclick=()=>{updateAllDisplays();showOverlay('homeScreen');};
+document.getElementById('btnSettings').onclick=()=>showOverlay('settingsScreen');
+document.getElementById('btnSettingsBack').onclick=()=>showOverlay('homeScreen');
+document.getElementById('btnDevMode').onclick=()=>{document.getElementById('devPwd').value='';document.getElementById('devMsg').textContent='';if(!_isDev){document.getElementById('devLock').style.display='flex';document.getElementById('devPanel').style.display='none';}else{buildDevPanel();document.getElementById('devLock').style.display='none';document.getElementById('devPanel').style.display='flex';}showOverlay('devScreen');};
+document.getElementById('btnDevUnlock').onclick=unlockDev;
+document.getElementById('btnDevBack').onclick=()=>{updateAllDisplays();showOverlay('settingsScreen');};
+document.getElementById('btnDevSave').onclick=()=>{st.gold=parseInt(document.getElementById('devGold').value)||0;st.dia=parseInt(document.getElementById('devDia').value)||0;saveData();updateAllDisplays();buildDevPanel();};
 
 // ── 流程 ──
 function sg(){
   st.ph='idle';st.sc=0;st.cb=0;st.mc=0;st.psx=1;st.psy=1;st.prt=0;st.pwy=P.PH;st.cx=0;st.cz=0;st.psk=0;st.pbo=0;st._bv=0;st.pt=[];st.pp=[];st.cpi=0;st.npi=1;
   _overlayStack=['game'];history.replaceState({ov:'game'},'',location.href);
   inp();st.pwx=pl[0].wx;st.pwz=pl[0].wz;
-  ['homeScreen','charScreen','gameOver','pauseScreen','gachaScreen','exchangeScreen','collectionScreen','redeemScreen'].forEach(x=>document.getElementById(x).classList.remove('show'));
+  ['homeScreen','charScreen','gameOver','pauseScreen','gachaScreen','exchangeScreen','collectionScreen','redeemScreen','settingsScreen','devScreen'].forEach(x=>document.getElementById(x).classList.remove('show'));
   document.getElementById('hud').style.display='block';
   document.getElementById('instructions').style.display='block';
   document.getElementById('pauseBtn').style.display='block';
