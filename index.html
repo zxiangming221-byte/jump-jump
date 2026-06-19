@@ -427,7 +427,24 @@ window.addEventListener('keyup',e=>{if(e.code==='Space'||e.code==='KeyJ')onR(e);
 
 // ── HUD ──
 function uh(){document.getElementById('score').textContent=st.sc;const ce=document.getElementById('combo');if(st.cb>=3){ce.textContent=st.cb+' 连击';ce.classList.add('show');}else ce.classList.remove('show');}
-function showOverlay(id){['homeScreen','charScreen','gameOver','pauseScreen','gachaScreen','exchangeScreen','collectionScreen','redeemScreen'].forEach(x=>document.getElementById(x).classList.remove('show'));document.getElementById(id).classList.add('show');}
+
+var _overlayStack=[];
+function _pushOverlay(id){
+  _overlayStack.push(id);
+  history.pushState({ov:id},'',location.href);
+}
+function showOverlay(id){
+  _pushOverlay(id);
+  _applyOverlay(id);
+}
+function _applyOverlay(id){
+  ['homeScreen','charScreen','gameOver','pauseScreen','gachaScreen','exchangeScreen','collectionScreen','redeemScreen'].forEach(function(x){document.getElementById(x).classList.remove('show');});
+  document.getElementById(id).classList.add('show');
+}
+window.addEventListener('popstate',function(e){
+  if(_overlayStack.length>1){_overlayStack.pop();_applyOverlay(_overlayStack[_overlayStack.length-1]);}
+  else{_overlayStack=['homeScreen'];history.replaceState({ov:'homeScreen'},'',location.href);}
+});
 
 // ── 抽奖系统 ──
 function rollPrize(){
